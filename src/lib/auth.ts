@@ -2,6 +2,7 @@ import {
   createUserWithEmailAndPassword,
   getAuth,
   GoogleAuthProvider,
+  sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signInWithPopup,
   signOut,
@@ -22,6 +23,10 @@ export function signInWithEmail(email: string, password: string) {
 
 export function signInWithGoogle() {
   return signInWithPopup(auth, googleProvider);
+}
+
+export function sendPasswordReset(email: string) {
+  return sendPasswordResetEmail(auth, email);
 }
 
 export function signOutUser() {

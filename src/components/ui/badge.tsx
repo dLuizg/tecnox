@@ -8,7 +8,11 @@ const badgeVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground [a]:hover:bg-primary/80",
+        default: "bg-status-muted text-status-muted-foreground [a]:hover:bg-status-muted/80",
+        neutral: "bg-status-muted text-status-muted-foreground [a]:hover:bg-status-muted/80",
+        success: "bg-success text-success-foreground [a]:hover:bg-success/80",
+        warning: "bg-warning text-warning-foreground [a]:hover:bg-warning/80",
+        muted: "bg-status-muted text-status-muted-foreground [a]:hover:bg-status-muted/80",
         secondary:
           "bg-secondary text-secondary-foreground [a]:hover:bg-secondary/80",
         destructive:

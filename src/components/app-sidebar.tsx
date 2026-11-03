@@ -42,10 +42,8 @@ const sections: { label?: string; items: NavItem[] }[] = [
     label: "Cadastro",
     items: [
       { label: "Produtos", href: "/produtos", icon: Package },
-      { label: "Categorias", href: "/categorias", icon: Tag },
       { label: "Clientes", href: "/clientes", icon: UserRoundPlus },
       { label: "Fornecedores", href: "/fornecedores", icon: UsersRound },
-      { label: "Relatórios", href: "/relatorios", icon: ChartNoAxesColumn },
       { label: "Usuários/Equipe", href: "/equipe", icon: UsersRound },
     ],
   },
@@ -58,20 +56,9 @@ const sections: { label?: string; items: NavItem[] }[] = [
     ],
   },
   {
-    label: "Financeiro",
-    items: [
-      { label: "Contas a pagar", href: "/contas-a-pagar", icon: CreditCard, badge: "3", badgeTone: "red" },
-      { label: "Contas a receber", href: "/contas-a-receber", icon: Wallet, badge: "5", badgeTone: "green" },
-      { label: "Fluxo de caixa", href: "/fluxo-de-caixa", icon: CircleDollarSign },
-      { label: "Formas de pagamento", href: "/formas-de-pagamento", icon: Banknote },
-      { label: "Relatórios financeiros / DRE", href: "/relatorios-financeiros", icon: TrendingUp },
-    ],
-  },
-  {
     label: "Ajustes",
     items: [
       { label: "Perfil", href: "/profile", icon: UserRound },
-      { label: "Configurações", href: "/configuracoes", icon: Settings },
       { label: "Ajuda", href: "/ajuda", icon: CircleHelp },
     ],
   },

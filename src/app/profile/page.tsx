@@ -48,7 +48,7 @@ export default function ProfilePage() {
           name: profile.name,
           email: profile.email,
           phone: profile.phone,
-          jobTitle: profile.jobTitle || getRoleLabel(profile.role),
+          jobTitle: getRoleLabel(profile.role),
         });
       } catch {
         if (!cancelled) setFeedback({ kind: "error", message: "Não foi possível carregar os dados do perfil." });
@@ -112,7 +112,7 @@ export default function ProfilePage() {
                   <Input id="profile-phone" type="tel" autoComplete="tel" value={form.phone} onChange={(event) => changeField("phone", formatPhoneInput(event.target.value))} disabled={isLoading} className={fieldClass} placeholder="(11) 90000-0000" />
                 </ProfileField>
                 <ProfileField label="Cargo" icon={BriefcaseBusiness}>
-                  <Input id="profile-job-title" autoComplete="organization-title" value={form.jobTitle} onChange={(event) => changeField("jobTitle", event.target.value)} disabled={isLoading} className={fieldClass} placeholder="Seu cargo" />
+                  <Input id="profile-job-title" value={form.jobTitle} readOnly disabled={isLoading} className={fieldClass} aria-readonly="true" />
                 </ProfileField>
               </div>
             </Card>

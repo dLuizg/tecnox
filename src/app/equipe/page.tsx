@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import AppSidebar from "@/src/components/app-sidebar";
 import { formatPhoneInput } from "@/src/helpers/phone";
+import { formatDateInput } from "@/src/helpers/date";
 
 type TeamMember = {
   id: number;
@@ -156,7 +157,7 @@ export default function TeamPage() {
                   <Field label="Senha temporária" icon={ShieldCheck}><input className={`${fieldClass} pl-7`} type="password" placeholder="••••••••" value={form.temporaryPassword} onChange={(event) => changeForm("temporaryPassword", event.target.value)} /></Field>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
-                  <Field label="Data de admissão" icon={MapPin}><input className={`${fieldClass} pl-7`} placeholder="dd/mm/aaaa" value={form.admissionDate} onChange={(event) => changeForm("admissionDate", event.target.value)} /></Field>
+                  <Field label="Data de admissão" icon={MapPin}><input className={`${fieldClass} pl-7`} placeholder="dd/mm/aaaa" value={form.admissionDate} onChange={(event) => changeForm("admissionDate", formatDateInput(event.target.value))} /></Field>
                   <Field label="Loja / unidade" icon={House}><input className={`${fieldClass} pl-7`} placeholder="Matriz - Vargem Grande, SP" value={form.location} onChange={(event) => changeForm("location", event.target.value)} /></Field>
                 </div>
 

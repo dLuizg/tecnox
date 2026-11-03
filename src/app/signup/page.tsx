@@ -106,7 +106,7 @@ export default function CadastroPage() {
             <PasswordField id="confirm-password" label="Repita a sua senha" autoComplete="new-password" value={confirmPassword} onChange={setConfirmPassword} visible={showConfirmPassword} onToggle={() => setShowConfirmPassword((shown) => !shown)} />
 
             <div className="-mt-1">
-              <Link href="/login" className="text-xs text-[#444] underline">Esqueci minha senha</Link>
+              <Link href="/signin" className="text-xs text-[#444] underline">Esqueci minha senha</Link>
             </div>
 
             {feedback && <p role="status" aria-live="polite" className={`rounded-lg px-3 py-2 text-xs leading-5 ${feedback.kind === "error" ? "bg-red-50 text-red-700" : "bg-green-50 text-green-700"}`}>{feedback.message}</p>}
@@ -122,7 +122,7 @@ export default function CadastroPage() {
             Google
           </Button>
           <p className="mt-4 text-center text-xs text-[#555]">
-            Já tem uma conta? <Link href="/login" className="font-semibold text-[#222] underline">Entrar</Link>
+            Já tem uma conta? <Link href="/signin" className="font-semibold text-[#222] underline">Entrar</Link>
           </p>
         </div>
       </section>

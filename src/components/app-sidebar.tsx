@@ -70,7 +70,7 @@ const sections: { label?: string; items: NavItem[] }[] = [
   {
     label: "Ajustes",
     items: [
-      { label: "Perfil", href: "/me", icon: UserRound },
+      { label: "Perfil", href: "/profile", icon: UserRound },
       { label: "Configurações", href: "/configuracoes", icon: Settings },
       { label: "Ajuda", href: "/ajuda", icon: CircleHelp },
     ],
@@ -90,7 +90,7 @@ export function AppSidebar({ className = "" }: AppSidebarProps) {
 
   async function handleSignOut() {
     await signOutUser();
-    router.replace("/login");
+    router.replace("/signin");
   }
 
   const displayName = user?.displayName || user?.email?.split("@")[0] || "Usuário";

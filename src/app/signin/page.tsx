@@ -133,7 +133,7 @@ export default function LoginPage() {
               <Button type="submit" disabled={isLoading || isResetting} className="h-[38px] rounded-lg bg-[#e51f23] text-sm font-semibold text-white hover:bg-[#ca1b1f]">
                 {isLoading ? <><LoaderCircle className="mr-2 size-4 animate-spin" /> Entrando...</> : "Entrar"}
               </Button>
-              <Link href="/cadastro" className="inline-flex h-[38px] items-center justify-center rounded-lg border border-[#777] text-sm font-semibold hover:bg-gray-50">
+              <Link href="/signup" className="inline-flex h-[38px] items-center justify-center rounded-lg border border-[#777] text-sm font-semibold hover:bg-gray-50">
                 Cadastrar
               </Link>
             </div>

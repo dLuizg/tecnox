@@ -9,7 +9,7 @@ import {
   signInWithPopup,
   signOut,
 } from "firebase/auth";
-import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
+import { doc, getDoc, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
 
 import app, { db } from "./firebase";
 
@@ -20,6 +20,17 @@ export type UserProfileInput = {
   email: string;
   role: UserRole;
 };
+
+export type UserProfile = {
+  uid: string;
+  name: string;
+  email: string;
+  role?: UserRole;
+  phone: string;
+  jobTitle: string;
+};
+
+export type EditableUserProfile = Pick<UserProfile, "name" | "phone" | "jobTitle">;
 
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
@@ -54,6 +65,38 @@ export async function saveUserProfile(user: User, profile: UserProfileInput) {
     role: profile.role,
     createdAt: serverTimestamp(),
   });
+}
+
+export async function getUserProfile(user: User): Promise<UserProfile> {
+  const profileSnapshot = await getDoc(doc(db, "users", user.uid));
+  const profile = profileSnapshot.exists() ? profileSnapshot.data() : {};
+
+  return {
+    uid: user.uid,
+    name: typeof profile.name === "string" && profile.name.trim() ? profile.name : user.displayName ?? "",
+    email: typeof profile.email === "string" && profile.email.trim() ? profile.email : user.email ?? "",
+    role: profile.role === "store_admin" || profile.role === "employee" ? profile.role : undefined,
+    phone: typeof profile.phone === "string" ? profile.phone : "",
+    jobTitle: typeof profile.jobTitle === "string" ? profile.jobTitle : "",
+  };
+}
+
+export async function updateUserProfile(user: User, profile: EditableUserProfile) {
+  const profileRef = doc(db, "users", user.uid);
+  const existingProfile = await getDoc(profileRef);
+  const values = {
+    uid: user.uid,
+    name: profile.name.trim(),
+    email: user.email ?? "",
+    phone: profile.phone.trim(),
+    jobTitle: profile.jobTitle.trim(),
+  };
+
+  if (existingProfile.exists()) {
+    await updateDoc(profileRef, values);
+  } else {
+    await setDoc(profileRef, { ...values, createdAt: serverTimestamp() }, { merge: true });
+  }
 }
 
 export function sendPasswordReset(email: string) {

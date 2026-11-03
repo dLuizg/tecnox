@@ -1,26 +1,90 @@
 "use client";
 
-import { useState, type ChangeEvent, type FormEvent } from "react";
-import { UserRound } from "lucide-react";
+import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
+import { BriefcaseBusiness, LoaderCircle, Mail, Phone, UserRound } from "lucide-react";
+import { onAuthStateChanged, updateProfile, type User } from "firebase/auth";
 import AppSidebar from "@/src/components/app-sidebar";
 import { Button } from "@/src/components/ui/button";
 import { Card } from "@/src/components/ui/card";
 import { Input } from "@/src/components/ui/input";
 import { formatPhoneInput } from "@/src/helpers/phone";
+import { auth, getUserProfile, updateUserProfile } from "@/src/lib/auth";
 
-const fieldClass = "h-[29px] rounded-md border-[#dedede] px-2 text-[10px] shadow-none placeholder:text-neutral-400 focus-visible:border-red-400 focus-visible:ring-red-100";
+type Feedback = { kind: "error" | "success"; message: string } | null;
+type ProfileForm = { name: string; email: string; phone: string; jobTitle: string };
+
+const fieldClass = "h-[34px] rounded-md border-[#dedede] pl-8 pr-2 text-[11px] shadow-none placeholder:text-neutral-400 focus-visible:border-red-400 focus-visible:ring-red-100 disabled:bg-neutral-50 disabled:text-neutral-500";
+const emptyForm: ProfileForm = { name: "", email: "", phone: "", jobTitle: "" };
+
+function getRoleLabel(role?: string) {
+  if (role === "store_admin") return "Administrador da loja";
+  if (role === "employee") return "Funcionário";
+  return "";
+}
 
 export default function ProfilePage() {
-  const [photo, setPhoto] = useState<string | null>(null);
-  const [phone, setPhone] = useState("");
+  const router = useRouter();
+  const [user, setUser] = useState<User | null>(null);
+  const [form, setForm] = useState<ProfileForm>(emptyForm);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [feedback, setFeedback] = useState<Feedback>(null);
 
-  function handlePhotoChange(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    if (file?.type.startsWith("image/")) setPhoto(URL.createObjectURL(file));
+  useEffect(() => {
+    let cancelled = false;
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      if (!currentUser) {
+        router.replace("/signin");
+        return;
+      }
+
+      setUser(currentUser);
+      setIsLoading(true);
+      try {
+        const profile = await getUserProfile(currentUser);
+        if (cancelled) return;
+        setForm({
+          name: profile.name,
+          email: profile.email,
+          phone: profile.phone,
+          jobTitle: profile.jobTitle || getRoleLabel(profile.role),
+        });
+      } catch {
+        if (!cancelled) setFeedback({ kind: "error", message: "Não foi possível carregar os dados do perfil." });
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, [router]);
+
+  function changeField(field: keyof ProfileForm, value: string) {
+    setForm((current) => ({ ...current, [field]: value }));
+    setFeedback(null);
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!user) return;
+
+    setFeedback(null);
+    setIsSaving(true);
+    try {
+      await updateUserProfile(user, form);
+      if (user.displayName !== form.name.trim()) {
+        await updateProfile(user, { displayName: form.name.trim() });
+      }
+      setFeedback({ kind: "success", message: "Perfil salvo com sucesso." });
+    } catch {
+      setFeedback({ kind: "error", message: "Não foi possível salvar as alterações. Tente novamente." });
+    } finally {
+      setIsSaving(false);
+    }
   }
 
   return (
@@ -37,73 +101,52 @@ export default function ProfilePage() {
             <Card className="rounded-lg border border-[#e5e5e5] bg-white px-[18px] pb-5 pt-4 shadow-none ring-0">
               <h2 className="border-b border-neutral-200 pb-2 text-[11px] font-medium">Meu Perfil</h2>
 
-              <div className="flex flex-col items-center pb-2 pt-4">
-                <div className="flex size-[56px] items-center justify-center overflow-hidden rounded-full border border-[#dedede] bg-[#eeeeee] text-neutral-400">
-                  {photo ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={photo} alt="Prévia da foto de perfil" className="size-full object-cover" />
-                  ) : (
-                    <UserRound aria-hidden="true" className="size-6" strokeWidth={1.4} />
-                  )}
-                </div>
-                <label className="mt-1 cursor-pointer text-[9px] font-medium text-[#ed3535] hover:text-red-700">
-                  Alterar foto
-                  <input type="file" accept="image/*" onChange={handlePhotoChange} className="sr-only" aria-label="Alterar foto de perfil" />
-                </label>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="block">
-                  <span className="mb-0.5 block text-[9px] font-medium uppercase">Nome completo</span>
-                  <Input className={fieldClass} placeholder="Nicolas Souza" />
-                </label>
-                <label className="block">
-                  <span className="mb-0.5 block text-[9px] font-medium uppercase">E-mail</span>
-                  <Input type="email" className={fieldClass} placeholder="nicolassouza.adm@adm.com" />
-                </label>
-                <label className="block">
-                  <span className="mb-0.5 block text-[9px] font-medium uppercase">Telefone</span>
-                  <Input
-                    type="tel"
-                    className={fieldClass}
-                    placeholder="(11) 90000-0000"
-                    value={phone}
-                    onChange={(event) => setPhone(formatPhoneInput(event.target.value))}
-                  />
-                </label>
-                <label className="block">
-                  <span className="mb-0.5 block text-[9px] font-medium uppercase">Cargo</span>
-                  <Input className={fieldClass} placeholder="Administrador" />
-                </label>
+              <div className="space-y-2 pt-4">
+                <ProfileField label="Nome completo" icon={UserRound}>
+                  <Input id="profile-name" autoComplete="name" required minLength={2} value={form.name} onChange={(event) => changeField("name", event.target.value)} disabled={isLoading} className={fieldClass} placeholder="Seu nome" />
+                </ProfileField>
+                <ProfileField label="E-mail" icon={Mail}>
+                  <Input id="profile-email" type="email" value={form.email} readOnly disabled={isLoading} className={fieldClass} />
+                </ProfileField>
+                <ProfileField label="Telefone" icon={Phone}>
+                  <Input id="profile-phone" type="tel" autoComplete="tel" value={form.phone} onChange={(event) => changeField("phone", formatPhoneInput(event.target.value))} disabled={isLoading} className={fieldClass} placeholder="(11) 90000-0000" />
+                </ProfileField>
+                <ProfileField label="Cargo" icon={BriefcaseBusiness}>
+                  <Input id="profile-job-title" autoComplete="organization-title" value={form.jobTitle} onChange={(event) => changeField("jobTitle", event.target.value)} disabled={isLoading} className={fieldClass} placeholder="Seu cargo" />
+                </ProfileField>
               </div>
             </Card>
 
-            <Card className="mt-5 rounded-lg border border-[#e5e5e5] bg-white px-[18px] pb-5 pt-4 shadow-none ring-0">
-              <h2 className="mb-3 border-b border-neutral-200 pb-2 text-[11px] font-medium">Alterar Senha</h2>
-              <div className="space-y-1.5">
-                <label className="block">
-                  <span className="mb-0.5 block text-[9px] font-medium uppercase">Senha atual</span>
-                  <Input type="password" className={fieldClass} placeholder="••••••••" />
-                </label>
-                <label className="block">
-                  <span className="mb-0.5 block text-[9px] font-medium uppercase">Nova senha</span>
-                  <Input type="password" className={fieldClass} placeholder="••••••••" />
-                </label>
-                <label className="block">
-                  <span className="mb-0.5 block text-[9px] font-medium uppercase">Confirmar nova senha</span>
-                  <Input type="password" className={fieldClass} placeholder="••••••••" />
-                </label>
-              </div>
-            </Card>
+            {feedback && (
+              <p role="status" aria-live="polite" className={`mt-3 rounded-md px-3 py-2 text-[11px] ${feedback.kind === "error" ? "bg-red-50 text-red-700" : "bg-green-50 text-green-700"}`}>
+                {feedback.message}
+              </p>
+            )}
 
             <div className="mt-4 flex justify-center sm:justify-end">
-              <Button type="submit" className="h-[31px] w-[154px] rounded-md bg-[#ed3535] text-[10px] font-medium text-white hover:bg-red-600">
-                Salvar Alterações
+              <Button type="submit" disabled={isLoading || isSaving} className="h-[34px] w-[154px] rounded-md bg-[#ed3535] text-[10px] font-medium text-white hover:bg-red-600">
+                {isLoading ? <><LoaderCircle className="mr-2 size-3.5 animate-spin" /> Carregando...</> : isSaving ? <><LoaderCircle className="mr-2 size-3.5 animate-spin" /> Salvando...</> : "Salvar Alterações"}
               </Button>
             </div>
           </form>
         </div>
       </main>
     </div>
+  );
+}
+
+function ProfileField({ label, icon: Icon, children }: {
+  label: string;
+  icon: typeof UserRound;
+  children: ReactNode;
+}) {
+  return (
+    <label className="block">
+      <span className="mb-0.5 block text-[9px] font-medium uppercase">{label}</span>
+      <span className="relative block">
+        <Icon aria-hidden="true" className="pointer-events-none absolute left-2.5 top-1/2 z-10 size-3.5 -translate-y-1/2 text-neutral-400" strokeWidth={1.7} />
+        {children}
+      </span>
+    </label>
   );
 }

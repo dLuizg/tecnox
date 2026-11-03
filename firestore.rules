@@ -70,5 +70,48 @@ service cloud.firestore {
         && getAfter(/databases/$(database)/documents/users/$(request.auth.uid)).data.storeId == storeId;
       allow update, delete: if false;
     }
+
+    match /clients/{clientId} {
+      function isStoreAdmin(storeId) {
+        return request.auth != null
+          && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'store_admin'
+          && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.storeId == storeId
+          && get(/databases/$(database)/documents/store/$(storeId)).data.ownerUid == request.auth.uid;
+      }
+
+      function validClient(data) {
+        return data.keys().hasOnly([
+            'storeId', 'name', 'cpf', 'birthDate', 'email', 'phone', 'address', 'createdAt', 'updatedAt'
+          ])
+          && data.storeId is string
+          && data.name is string && data.name.size() > 0
+          && data.cpf is string && data.cpf.matches('^[0-9]{11}$')
+          && data.birthDate is string && data.birthDate.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+          && data.email is string
+          && data.phone is string
+          && data.address is map
+          && data.address.keys().hasAll(['cep', 'street', 'number', 'complement', 'neighborhood', 'city', 'state'])
+          && data.address.keys().hasOnly(['cep', 'street', 'number', 'complement', 'neighborhood', 'city', 'state'])
+          && data.address.cep is string && data.address.cep.matches('^[0-9]{5}-?[0-9]{3}$')
+          && data.address.street is string && data.address.street.size() > 0
+          && data.address.number is string && data.address.number.size() > 0
+          && data.address.complement is string
+          && data.address.neighborhood is string && data.address.neighborhood.size() > 0
+          && data.address.city is string && data.address.city.size() > 0
+          && data.address.state is string && data.address.state.matches('^[A-Z]{2}$');
+      }
+
+      allow get, list: if isStoreAdmin(resource.data.storeId);
+      allow create: if isStoreAdmin(request.resource.data.storeId)
+        && validClient(request.resource.data)
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+      allow update: if isStoreAdmin(resource.data.storeId)
+        && request.resource.data.storeId == resource.data.storeId
+        && request.resource.data.createdAt == resource.data.createdAt
+        && validClient(request.resource.data)
+        && request.resource.data.updatedAt == request.time;
+      allow delete: if false;
+    }
   }
 }

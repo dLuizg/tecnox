@@ -1,10 +1,12 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { useEffect } from "react";
+import { onAuthStateChanged } from "firebase/auth";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, LoaderCircle } from "lucide-react";
-import { signInWithGoogle, signUpWithEmail } from "@/src/lib/auth";
+import { auth, saveUserProfile, signInWithGoogle, signUpWithEmail, type UserProfileInput, type UserRole } from "@/src/lib/auth";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
 import { Label } from "@/src/components/ui/label";
@@ -37,6 +39,9 @@ function getAuthErrorMessage(error: unknown) {
 export default function CadastroPage() {
   const router = useRouter();
   const [username, setUsername] = useState("");
+  const [role, setRole] = useState<UserRole | "">("");
+  const [isGoogleProfileCompletion, setIsGoogleProfileCompletion] = useState(false);
+  const [pendingProfile, setPendingProfile] = useState<UserProfileInput | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -44,6 +49,33 @@ export default function CadastroPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [feedback, setFeedback] = useState<Feedback>(null);
+
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("completeProfile") !== "1") return;
+    return onAuthStateChanged(auth, (user) => {
+      if (!user) return;
+      setIsGoogleProfileCompletion(true);
+      setUsername(user.displayName ?? "");
+      setEmail(user.email ?? "");
+    });
+  }, []);
+
+  async function finishProfile(profile: UserProfileInput) {
+    const user = auth.currentUser;
+    if (!user) {
+      setFeedback({ kind: "error", message: "Sua sessão expirou. Entre novamente para concluir o cadastro." });
+      setPendingProfile(null);
+      return;
+    }
+
+    setPendingProfile(profile);
+    try {
+      await saveUserProfile(user, profile);
+      router.push("/dashboard");
+    } catch {
+      setFeedback({ kind: "error", message: "Sua conta foi criada, mas não foi possível salvar seu perfil. Tente novamente." });
+    }
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -53,11 +85,22 @@ export default function CadastroPage() {
       setFeedback({ kind: "error", message: "As senhas não coincidem. Confira e tente novamente." });
       return;
     }
+    if (!role) {
+      setFeedback({ kind: "error", message: "Selecione o tipo de acesso para continuar." });
+      return;
+    }
 
     setIsLoading(true);
     try {
-      await signUpWithEmail(email.trim(), password);
-      router.push("/dashboard");
+      const credential = await signUpWithEmail(email.trim(), password);
+      const profile = { name: username.trim(), email: credential.user.email ?? email.trim(), role };
+      setPendingProfile(profile);
+      try {
+        await saveUserProfile(credential.user, profile);
+        router.push("/dashboard");
+      } catch {
+        setFeedback({ kind: "error", message: "Sua conta foi criada, mas não foi possível salvar seu perfil. Tente novamente." });
+      }
     } catch (error) {
       setFeedback({ kind: "error", message: getAuthErrorMessage(error) });
     } finally {
@@ -67,15 +110,59 @@ export default function CadastroPage() {
 
   async function handleGoogleSignUp() {
     setFeedback(null);
+    if (!role) {
+      setFeedback({ kind: "error", message: "Selecione o tipo de acesso antes de continuar com o Google." });
+      return;
+    }
     setIsLoading(true);
     try {
-      await signInWithGoogle();
-      router.push("/dashboard");
+      const { credential, isNewUser } = await signInWithGoogle();
+      if (isNewUser) {
+        const profile = {
+          name: credential.user.displayName ?? username.trim() ?? "",
+          email: credential.user.email ?? "",
+          role,
+        };
+        setPendingProfile(profile);
+        try {
+          await saveUserProfile(credential.user, profile);
+          router.push("/dashboard");
+        } catch {
+          setFeedback({ kind: "error", message: "Sua conta foi criada, mas não foi possível salvar seu perfil. Tente novamente." });
+        }
+      } else {
+        router.push("/dashboard");
+      }
     } catch (error) {
       setFeedback({ kind: "error", message: getAuthErrorMessage(error) });
     } finally {
       setIsLoading(false);
     }
+  }
+
+  async function handleCompleteGoogleProfile(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setFeedback(null);
+    if (!role) {
+      setFeedback({ kind: "error", message: "Selecione o tipo de acesso para continuar." });
+      return;
+    }
+    const user = auth.currentUser;
+    if (!user) {
+      setFeedback({ kind: "error", message: "Sua sessão expirou. Entre novamente para concluir o cadastro." });
+      return;
+    }
+    setIsLoading(true);
+    await finishProfile({ name: username.trim() || user.displayName || "", email: user.email ?? email.trim(), role });
+    setIsLoading(false);
+  }
+
+  async function handleRetryProfile() {
+    if (!pendingProfile) return;
+    setFeedback(null);
+    setIsLoading(true);
+    await finishProfile(pendingProfile);
+    setIsLoading(false);
   }
 
   return (
@@ -91,36 +178,51 @@ export default function CadastroPage() {
           <div className="mb-4 text-center text-[27px] font-medium tracking-[0.12em]" aria-label="Tecnox">
             TECNO<span className="-ml-1.5 text-[#e52225]">X</span>
           </div>
-          <h1 className="mb-5 text-center text-base font-bold">Crie sua conta</h1>
+          <h1 className="mb-5 text-center text-base font-bold">{isGoogleProfileCompletion ? "Conclua seu cadastro" : "Crie sua conta"}</h1>
 
-          <form className="space-y-3" onSubmit={handleSubmit}>
+          <form className="space-y-3" onSubmit={isGoogleProfileCompletion ? handleCompleteGoogleProfile : handleSubmit}>
             <div className="space-y-1.5">
               <Label htmlFor="username" className="text-xs font-normal text-[#333]">Nome de usuário</Label>
               <Input id="username" name="username" type="text" autoComplete="username" required minLength={2} value={username} onChange={(event) => setUsername(event.target.value)} className="h-[38px] rounded-lg border-[#aaa] px-2.5 text-sm shadow-none focus-visible:ring-1 focus-visible:ring-[#888]" />
             </div>
-            <div className="space-y-1.5">
+            {!isGoogleProfileCompletion && <div className="space-y-1.5">
               <Label htmlFor="email" className="text-xs font-normal text-[#333]">E-mail</Label>
               <Input id="email" name="email" type="email" autoComplete="email" required value={email} onChange={(event) => setEmail(event.target.value)} className="h-[38px] rounded-lg border-[#aaa] px-2.5 text-sm shadow-none focus-visible:ring-1 focus-visible:ring-[#888]" />
+            </div>}
+            {!isGoogleProfileCompletion && <>
+              <PasswordField id="password" label="Senha" autoComplete="new-password" value={password} onChange={setPassword} visible={showPassword} onToggle={() => setShowPassword((shown) => !shown)} />
+              <PasswordField id="confirm-password" label="Repita a sua senha" autoComplete="new-password" value={confirmPassword} onChange={setConfirmPassword} visible={showConfirmPassword} onToggle={() => setShowConfirmPassword((shown) => !shown)} />
+            </>}
+
+            <div className="space-y-1.5">
+              <Label htmlFor="role" className="text-xs font-normal text-[#333]">Tipo de acesso</Label>
+              <select id="role" name="role" required value={role} onChange={(event) => setRole(event.target.value as UserRole | "")} className="h-[38px] w-full rounded-lg border border-[#aaa] bg-white px-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#888]">
+                <option value="" disabled>Selecione uma opção</option>
+                <option value="store_admin">Administrador da loja</option>
+                <option value="employee">Funcionário</option>
+              </select>
             </div>
-            <PasswordField id="password" label="Senha" autoComplete="new-password" value={password} onChange={setPassword} visible={showPassword} onToggle={() => setShowPassword((shown) => !shown)} />
-            <PasswordField id="confirm-password" label="Repita a sua senha" autoComplete="new-password" value={confirmPassword} onChange={setConfirmPassword} visible={showConfirmPassword} onToggle={() => setShowConfirmPassword((shown) => !shown)} />
 
             <div className="-mt-1">
-              <Link href="/signin" className="text-xs text-[#444] underline">Esqueci minha senha</Link>
+              {!isGoogleProfileCompletion && <Link href="/signin" className="text-xs text-[#444] underline">Esqueci minha senha</Link>}
             </div>
 
             {feedback && <p role="status" aria-live="polite" className={`rounded-lg px-3 py-2 text-xs leading-5 ${feedback.kind === "error" ? "bg-red-50 text-red-700" : "bg-green-50 text-green-700"}`}>{feedback.message}</p>}
 
-            <Button type="submit" disabled={isLoading} className="h-[38px] w-full rounded-lg bg-[#e51f23] text-sm font-semibold text-white hover:bg-[#ca1b1f]">
-              {isLoading ? <><LoaderCircle className="mr-2 size-4 animate-spin" /> Criando conta...</> : "Cadastrar"}
+            {pendingProfile && <Button type="button" variant="outline" disabled={isLoading} onClick={handleRetryProfile} className="h-[38px] w-full rounded-lg border-[#aaa] text-sm">Tentar salvar perfil novamente</Button>}
+
+            <Button type="submit" disabled={isLoading || Boolean(pendingProfile)} className="h-[38px] w-full rounded-lg bg-[#e51f23] text-sm font-semibold text-white hover:bg-[#ca1b1f]">
+              {isLoading ? <><LoaderCircle className="mr-2 size-4 animate-spin" /> Salvando...</> : isGoogleProfileCompletion ? "Concluir cadastro" : "Cadastrar"}
             </Button>
           </form>
 
-          <div className="mb-2 mt-4 text-xs text-[#444]">Ou cadastre-se com</div>
-          <Button type="button" variant="outline" disabled={isLoading} onClick={handleGoogleSignUp} className="relative h-[36px] w-full rounded-lg border-[#aaa] bg-white text-xs font-normal text-black hover:bg-gray-50">
-            <GoogleMark />
-            Google
-          </Button>
+          {!isGoogleProfileCompletion && <>
+            <div className="mb-2 mt-4 text-xs text-[#444]">Ou cadastre-se com</div>
+            <Button type="button" variant="outline" disabled={isLoading || Boolean(pendingProfile)} onClick={handleGoogleSignUp} className="relative h-[36px] w-full rounded-lg border-[#aaa] bg-white text-xs font-normal text-black hover:bg-gray-50">
+              <GoogleMark />
+              Google
+            </Button>
+          </>}
           <p className="mt-4 text-center text-xs text-[#555]">
             Já tem uma conta? <Link href="/signin" className="font-semibold text-[#222] underline">Entrar</Link>
           </p>

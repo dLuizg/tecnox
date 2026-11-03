@@ -65,8 +65,8 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      await signInWithGoogle();
-      router.push("/dashboard");
+      const { isNewUser } = await signInWithGoogle();
+      router.push(isNewUser ? "/signup?completeProfile=1" : "/dashboard");
     } catch (error) {
       setFeedback({ kind: "error", message: getAuthErrorMessage(error) });
     } finally {

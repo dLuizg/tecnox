@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { onAuthStateChanged } from "firebase/auth";
 import {
   Bell,
   ChevronDown,
@@ -14,6 +15,8 @@ import AppSidebar from "@/src/components/app-sidebar";
 import { Button } from "@/src/components/ui/button";
 import { Card } from "@/src/components/ui/card";
 import { Input } from "@/src/components/ui/input";
+import { auth, getUserProfile } from "@/src/lib/auth";
+import { useRouter } from "next/navigation";
 
 type Product = {
   sku: string;
@@ -62,9 +65,31 @@ function areaPath(values: number[]) {
 }
 
 export default function DashboardPage() {
+  const router = useRouter();
+  const [isCheckingStore, setIsCheckingStore] = useState(true);
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<"Mais vendidos" | "Maior faturamento">("Mais vendidos");
   const [showAllProducts, setShowAllProducts] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        router.replace("/signin");
+        return;
+      }
+      try {
+        const profile = await getUserProfile(user);
+        if (!active) return;
+        if (profile.role === "store_admin" && !profile.storeId) router.replace("/store-setup");
+      } catch {
+        if (active) router.replace("/signin");
+      } finally {
+        if (active) setIsCheckingStore(false);
+      }
+    });
+    return () => { active = false; unsubscribe(); };
+  }, [router]);
 
   const filteredProducts = useMemo(() => {
     const term = search.trim().toLocaleLowerCase("pt-BR");
@@ -74,6 +99,8 @@ export default function DashboardPage() {
   }, [search, sortBy]);
 
   const visibleProducts = showAllProducts || search.trim() ? filteredProducts : filteredProducts.slice(0, 5);
+
+  if (isCheckingStore) return <main className="grid min-h-screen place-items-center bg-[#f4f4f5] text-sm text-neutral-600">Verificando sua loja...</main>;
 
   return (
     <div className="flex min-h-screen bg-[#f4f4f5] text-[#171717]">

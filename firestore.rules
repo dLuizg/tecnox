@@ -15,6 +15,59 @@ service cloud.firestore {
         && request.resource.data.email is string
         && request.resource.data.role in ['store_admin', 'employee']
         && request.resource.data.createdAt == request.time;
+      allow update: if isOwner()
+        && resource.data.role == 'store_admin'
+        && !('storeId' in resource.data)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['storeId'])
+        && request.resource.data.storeId is string
+        && getAfter(/databases/$(database)/documents/store/$(request.resource.data.storeId)).data.ownerUid == uid;
+      allow delete: if false;
+    }
+
+    match /store/{storeId} {
+      function isOwner() {
+        return request.auth != null && request.auth.uid == resource.data.ownerUid;
+      }
+
+      allow get: if isOwner();
+      allow list: if false;
+      allow create: if request.auth != null
+        && request.resource.data.keys().hasOnly([
+          'storeId', 'ownerUid', 'employeeUids', 'name', 'cnpj', 'address',
+          'phone', 'email', 'createdAt'
+        ])
+        && request.resource.data.storeId == storeId
+        && request.resource.data.ownerUid == request.auth.uid
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'store_admin'
+        && request.resource.data.employeeUids is list
+        && request.resource.data.employeeUids.size() == 0
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 1
+        && request.resource.data.cnpj is string
+        && request.resource.data.cnpj.size() == 14
+        && request.resource.data.address is map
+        && request.resource.data.address.keys().hasAll([
+          'cep', 'street', 'number', 'neighborhood', 'city', 'state'
+        ])
+        && request.resource.data.address.keys().hasOnly([
+          'cep', 'street', 'number', 'complement', 'neighborhood', 'city', 'state'
+        ])
+        && request.resource.data.address.cep is string
+        && request.resource.data.address.street is string
+        && request.resource.data.address.number is string
+        && request.resource.data.address.neighborhood is string
+        && request.resource.data.address.city is string
+        && request.resource.data.address.state is string
+        && request.resource.data.address.cep.size() > 0
+        && request.resource.data.address.street.size() > 0
+        && request.resource.data.address.number.size() > 0
+        && request.resource.data.address.neighborhood.size() > 0
+        && request.resource.data.address.city.size() > 0
+        && request.resource.data.address.state.size() == 2
+        && request.resource.data.phone is string
+        && request.resource.data.email is string
+        && request.resource.data.createdAt == request.time
+        && getAfter(/databases/$(database)/documents/users/$(request.auth.uid)).data.storeId == storeId;
       allow update, delete: if false;
     }
   }

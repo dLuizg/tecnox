@@ -5,7 +5,7 @@ import { useEffect } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff, LoaderCircle } from "lucide-react";
+import { BriefcaseBusiness, Eye, EyeOff, LoaderCircle, LockKeyhole, Mail, UserRound } from "lucide-react";
 import { auth, saveUserProfile, signInWithGoogle, signUpWithEmail, type UserProfileInput, type UserRole } from "@/src/lib/auth";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
@@ -183,11 +183,11 @@ export default function CadastroPage() {
           <form className="space-y-3" onSubmit={isGoogleProfileCompletion ? handleCompleteGoogleProfile : handleSubmit}>
             <div className="space-y-1.5">
               <Label htmlFor="username" className="text-xs font-normal text-[#333]">Nome de usuário</Label>
-              <Input id="username" name="username" type="text" autoComplete="username" required minLength={2} value={username} onChange={(event) => setUsername(event.target.value)} className="h-[38px] rounded-lg border-[#aaa] px-2.5 text-sm shadow-none focus-visible:ring-1 focus-visible:ring-[#888]" />
+              <span className="relative block"><UserRound aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400" /><Input id="username" name="username" type="text" autoComplete="username" required minLength={2} value={username} onChange={(event) => setUsername(event.target.value)} className="h-[38px] rounded-lg border-[#aaa] py-1 pl-9 pr-2.5 text-sm shadow-none focus-visible:ring-1 focus-visible:ring-[#888]" /></span>
             </div>
             {!isGoogleProfileCompletion && <div className="space-y-1.5">
               <Label htmlFor="email" className="text-xs font-normal text-[#333]">E-mail</Label>
-              <Input id="email" name="email" type="email" autoComplete="email" required value={email} onChange={(event) => setEmail(event.target.value)} className="h-[38px] rounded-lg border-[#aaa] px-2.5 text-sm shadow-none focus-visible:ring-1 focus-visible:ring-[#888]" />
+              <span className="relative block"><Mail aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400" /><Input id="email" name="email" type="email" autoComplete="email" required value={email} onChange={(event) => setEmail(event.target.value)} className="h-[38px] rounded-lg border-[#aaa] py-1 pl-9 pr-2.5 text-sm shadow-none focus-visible:ring-1 focus-visible:ring-[#888]" /></span>
             </div>}
             {!isGoogleProfileCompletion && <>
               <PasswordField id="password" label="Senha" autoComplete="new-password" value={password} onChange={setPassword} visible={showPassword} onToggle={() => setShowPassword((shown) => !shown)} />
@@ -196,11 +196,11 @@ export default function CadastroPage() {
 
             <div className="space-y-1.5">
               <Label htmlFor="role" className="text-xs font-normal text-[#333]">Tipo de acesso</Label>
-              <select id="role" name="role" required value={role} onChange={(event) => setRole(event.target.value as UserRole | "")} className="h-[38px] w-full rounded-lg border border-[#aaa] bg-white px-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#888]">
+              <span className="relative block"><BriefcaseBusiness aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 z-10 size-4 -translate-y-1/2 text-neutral-400" /><select id="role" name="role" required value={role} onChange={(event) => setRole(event.target.value as UserRole | "")} className="h-[38px] w-full rounded-lg border border-[#aaa] bg-white py-1 pl-9 pr-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#888]">
                 <option value="" disabled>Selecione uma opção</option>
                 <option value="store_admin">Administrador da loja</option>
                 <option value="employee">Funcionário</option>
-              </select>
+              </select></span>
             </div>
 
             <div className="-mt-1">
@@ -253,7 +253,8 @@ function PasswordField({
     <div className="space-y-1.5">
       <Label htmlFor={id} className="text-xs font-normal text-[#333]">{label}</Label>
       <div className="relative">
-        <Input id={id} name={id} type={visible ? "text" : "password"} autoComplete={autoComplete} required minLength={6} value={value} onChange={(event) => onChange(event.target.value)} className="h-[38px] rounded-lg border-[#aaa] px-2.5 pr-10 text-sm shadow-none focus-visible:ring-1 focus-visible:ring-[#888]" />
+        <LockKeyhole aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400" />
+        <Input id={id} name={id} type={visible ? "text" : "password"} autoComplete={autoComplete} required minLength={6} value={value} onChange={(event) => onChange(event.target.value)} className="h-[38px] rounded-lg border-[#aaa] py-1 pl-9 pr-10 text-sm shadow-none focus-visible:ring-1 focus-visible:ring-[#888]" />
         <button type="button" onClick={onToggle} aria-label={visible ? "Ocultar senha" : "Mostrar senha"} className="absolute right-1 top-1/2 grid size-8 -translate-y-1/2 place-items-center rounded-md text-gray-500 hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-500">
           {visible ? <EyeOff size={16} /> : <Eye size={16} />}
         </button>

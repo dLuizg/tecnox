@@ -3,7 +3,7 @@
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff, LoaderCircle } from "lucide-react";
+import { Eye, EyeOff, LoaderCircle, LockKeyhole, Mail } from "lucide-react";
 import { sendPasswordReset, signInWithEmail, signInWithGoogle } from "@/src/lib/auth";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
@@ -110,12 +110,13 @@ export default function LoginPage() {
           <form className="space-y-4" onSubmit={handleSubmit}>
             <div className="space-y-1.5">
               <Label htmlFor="email" className="text-xs font-normal text-[#333]">E-mail ou usuário</Label>
-              <Input id="email" name="email" type="email" autoComplete="email" required value={email} onChange={(event) => setEmail(event.target.value)} className="h-[38px] rounded-lg border-[#aaa] px-2.5 text-sm shadow-none focus-visible:ring-1 focus-visible:ring-[#888]" />
+              <span className="relative block"><Mail aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400" /><Input id="email" name="email" type="email" autoComplete="email" required value={email} onChange={(event) => setEmail(event.target.value)} className="h-[38px] rounded-lg border-[#aaa] py-1 pl-9 pr-2.5 text-sm shadow-none focus-visible:ring-1 focus-visible:ring-[#888]" /></span>
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="password" className="text-xs font-normal text-[#333]">Senha</Label>
               <div className="relative">
-                <Input id="password" name="password" type={showPassword ? "text" : "password"} autoComplete="current-password" required value={password} onChange={(event) => setPassword(event.target.value)} className="h-[38px] rounded-lg border-[#aaa] px-2.5 pr-10 text-sm shadow-none focus-visible:ring-1 focus-visible:ring-[#888]" />
+                <LockKeyhole aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400" />
+                <Input id="password" name="password" type={showPassword ? "text" : "password"} autoComplete="current-password" required value={password} onChange={(event) => setPassword(event.target.value)} className="h-[38px] rounded-lg border-[#aaa] py-1 pl-9 pr-10 text-sm shadow-none focus-visible:ring-1 focus-visible:ring-[#888]" />
                 <button type="button" onClick={() => setShowPassword((shown) => !shown)} aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"} className="absolute right-1 top-1/2 grid size-8 -translate-y-1/2 place-items-center rounded-md text-gray-500 hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-500">
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>

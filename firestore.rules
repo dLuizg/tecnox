@@ -275,6 +275,63 @@ service cloud.firestore {
           && getAfter(/databases/$(database)/documents/store/$(resource.data.storeId)/members/$(request.auth.uid)).data.email.lower() == currentEmail());
     }
 
+    match /salesCounters/{storeId} {
+      function salePath() { return /databases/$(database)/documents/sales/$(request.resource.data.lastSaleId); }
+      function validCounter() {
+        let data = request.resource.data;
+        let sale = getAfter(salePath()).data;
+        return data.keys().hasOnly(['lastNumber', 'lastSaleId'])
+          && data.lastNumber is int && data.lastNumber > 0
+          && data.lastSaleId is string && !exists(salePath())
+          && sale.storeId == storeId && sale.orderNumber == data.lastNumber;
+      }
+      allow get: if canWorkInStore(storeId);
+      allow list, delete: if false;
+      allow create: if request.auth != null && request.resource.data.lastNumber == 1 && validCounter();
+      allow update: if request.auth != null && request.resource.data.lastNumber == resource.data.lastNumber + 1 && validCounter();
+    }
+
+    match /sales/{saleId} {
+      function productPath(id) { return /databases/$(database)/documents/products/$(id); }
+      function clientPath(id) { return /databases/$(database)/documents/clients/$(id); }
+      function validLine(data, index) {
+        let item = data.items[index];
+        return item is map && item.productId is string
+          && data.lines[item.productId] == item
+          && getAfter(productPath(item.productId)).data.lastSaleId == saleId;
+      }
+      function lineTotal(data, index) {
+        return data.items.size() > index ? data.items[index].totalCents : 0;
+      }
+      function validSale(data) {
+        return data.keys().hasOnly(['storeId', 'clientId', 'customer', 'items', 'lines', 'totalCents', 'payment', 'status', 'createdBy', 'createdAt', 'updatedAt', 'orderNumber'])
+          && data.storeId is string && data.clientId is string
+          && canWorkInStore(data.storeId)
+          && get(clientPath(data.clientId)).data.storeId == data.storeId
+          && data.customer == get(clientPath(data.clientId)).data.name
+          && data.orderNumber is int && data.orderNumber > 0
+          && getAfter(/databases/$(database)/documents/salesCounters/$(data.storeId)).data.lastNumber == data.orderNumber
+          && getAfter(/databases/$(database)/documents/salesCounters/$(data.storeId)).data.lastSaleId == saleId
+          && data.createdBy == request.auth.uid
+          && saleId.matches(request.auth.uid + '_[A-Za-z0-9-]+')
+          && data.payment in ['Pix', 'Cartão', 'Dinheiro'] && data.status == 'Concluída'
+          && data.createdAt == request.time && data.updatedAt == request.time
+          && data.items is list && data.items.size() >= 1 && data.items.size() <= 5
+          && data.lines is map && data.lines.size() == data.items.size()
+          && validLine(data, 0)
+          && (data.items.size() < 2 || validLine(data, 1))
+          && (data.items.size() < 3 || validLine(data, 2))
+          && (data.items.size() < 4 || validLine(data, 3))
+          && (data.items.size() < 5 || validLine(data, 4))
+          && data.items.toSet().size() == data.items.size()
+          && data.totalCents is int && data.totalCents == lineTotal(data, 0) + lineTotal(data, 1) + lineTotal(data, 2) + lineTotal(data, 3) + lineTotal(data, 4);
+      }
+      allow get: if request.auth != null && (saleId.matches(request.auth.uid + '_[A-Za-z0-9-]+') || canWorkInStore(resource.data.storeId));
+      allow list: if canWorkInStore(resource.data.storeId);
+      allow create: if request.auth != null && validSale(request.resource.data);
+      allow update, delete: if false;
+    }
+
     match /products/{productId} {
       function validProduct(data) {
         return data.keys().hasOnly([
@@ -308,7 +365,28 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/store/$(request.resource.data.storeId)).data.categories.hasAny([request.resource.data.category])
         && request.resource.data.createdAt == request.time
         && request.resource.data.updatedAt == request.time;
-      allow update, delete: if false;
+      function validSaleStockChange() {
+        let saleId = request.resource.data.lastSaleId;
+        let salePath = /databases/$(database)/documents/sales/$(saleId);
+        let sale = getAfter(salePath).data;
+        let line = sale.lines[productId];
+        return !exists(salePath)
+          && sale.storeId == resource.data.storeId
+          && line.keys().hasOnly(['productId', 'name', 'quantity', 'unitPriceCents', 'totalCents'])
+          && line.productId == productId && line.name == resource.data.name
+          && line.quantity is int && line.quantity > 0
+          && line.unitPriceCents is int && line.unitPriceCents >= 0
+          && line.unitPriceCents / 100.0 == resource.data.salePrice
+          && line.totalCents == line.unitPriceCents * line.quantity
+          && request.resource.data.stock == resource.data.stock - line.quantity
+          && request.resource.data.stock >= 0;
+      }
+      allow update: if request.auth != null
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['stock', 'updatedAt', 'lastSaleId'])
+        && request.resource.data.lastSaleId is string
+        && request.resource.data.updatedAt == request.time
+        && validSaleStockChange();
+      allow delete: if false;
     }
 
     match /clients/{clientId} {

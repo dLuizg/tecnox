@@ -34,8 +34,8 @@ const sections: { label?: string; items: NavItem[] }[] = [
   {
     label: "Cadastro",
     items: [
-      { label: "Cadastrar produto", href: "/produtos", icon: Package },
       { label: "Listagem de produtos", href: "/produtos/listagem", icon: List },
+      { label: "Cadastrar produto", href: "/produtos", icon: Package },
       { label: "Clientes", href: "/clientes", icon: UserRoundPlus },
       { label: "Fornecedores", href: "/fornecedores", icon: UsersRound },
       { label: "Usuários/Equipe", href: "/equipe", icon: UsersRound },

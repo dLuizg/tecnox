@@ -9,8 +9,10 @@ import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
 import { Textarea } from "@/src/components/ui/textarea";
 import { formatCurrencyInput } from "@/src/helpers/currency";
+import { formatCnpjInput } from "@/src/helpers/cpf-cnpj";
 import { auth } from "@/src/lib/auth";
 import { addStoreCategory, createProduct, getStoreCategories, type ProductInput } from "@/src/lib/products";
+import { listSuppliers, type Supplier } from "@/src/lib/suppliers";
 
 type FormState = Omit<ProductInput, "purchasePrice" | "salePrice" | "lengthCm" | "widthCm" | "heightCm" | "weightKg" | "isPhysicalProduct"> & {
   purchasePrice: string;
@@ -38,6 +40,7 @@ export default function CadastrarProdutoPage() {
   const [storeId, setStoreId] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm);
   const [categories, setCategories] = useState<string[]>([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [newCategory, setNewCategory] = useState("");
   const [addingCategory, setAddingCategory] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -54,7 +57,9 @@ export default function CadastrarProdutoPage() {
       setUser(currentUser);
       try {
         setStoreId(routeStoreId);
-        setCategories(await getStoreCategories(routeStoreId));
+        const [storeCategories, storeSuppliers] = await Promise.all([getStoreCategories(routeStoreId), listSuppliers(routeStoreId)]);
+        setCategories(storeCategories);
+        setSuppliers(storeSuppliers);
       } catch {
         if (active) setFeedback({ kind: "error", message: "Não foi possível carregar os dados da loja. Atualize a página e tente novamente." });
       } finally {
@@ -172,7 +177,7 @@ export default function CadastrarProdutoPage() {
               <div className="grid gap-4 sm:grid-cols-3">
                 <Field label="Produto físico" required><select className={selectStyle} value={form.isPhysicalProduct} onChange={(event) => update("isPhysicalProduct", event.target.value as FormState["isPhysicalProduct"])} required><option value="" disabled>Selecione Sim ou Não</option><option value="true">Sim</option><option value="false">Não</option></select></Field>
                 <Field label="Estoque" required><Input className={inputStyle} type="number" inputMode="numeric" min="0" step="1" placeholder="0" value={form.stock} onChange={(event) => update("stock", event.target.value === "" ? 0 : Number(event.target.value))} required /></Field>
-                <Field label="Fornecedor"><Input className={inputStyle} placeholder="Nome do fornecedor" value={form.supplier} onChange={(event) => update("supplier", event.target.value)} /></Field>
+                <Field label="Fornecedor"><select className={selectStyle} value={form.supplier} onChange={(event) => update("supplier", event.target.value)}><option value="">Sem fornecedor</option>{suppliers.map((supplier) => <option key={supplier.id} value={supplier.id}>{supplier.name} — {formatCnpjInput(supplier.cnpj)}</option>)}</select></Field>
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2">

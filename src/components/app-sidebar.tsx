@@ -13,6 +13,7 @@ import {
   Clock3,
   CreditCard,
   LayoutDashboard,
+  List,
   LogOut,
   Package,
   RotateCcw,
@@ -41,7 +42,8 @@ const sections: { label?: string; items: NavItem[] }[] = [
   {
     label: "Cadastro",
     items: [
-      { label: "Produtos", href: "/produtos", icon: Package },
+      { label: "Cadastrar produto", href: "/produtos", icon: Package },
+      { label: "Listagem de produtos", href: "/produtos/listagem", icon: List },
       { label: "Clientes", href: "/clientes", icon: UserRoundPlus },
       { label: "Fornecedores", href: "/fornecedores", icon: UsersRound },
       { label: "Usuários/Equipe", href: "/equipe", icon: UsersRound },
@@ -108,7 +110,7 @@ export function AppSidebar({ className = "" }: AppSidebarProps) {
             )}
             <ul className="space-y-0.5">
               {section.items.map(({ label, href, icon: Icon, badge, badgeTone }) => {
-                const active = pathname === href || (href !== "/dashboard" && pathname.startsWith(`${href}/`));
+                const active = pathname === href || (href !== "/dashboard" && href !== "/produtos" && pathname.startsWith(`${href}/`));
                 return (
                   <li key={href}>
                     <Link

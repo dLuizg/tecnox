@@ -33,7 +33,7 @@ service cloud.firestore {
       allow list: if false;
       allow create: if request.auth != null
         && request.resource.data.keys().hasOnly([
-          'storeId', 'ownerUid', 'employeeUids', 'name', 'cnpj', 'address',
+          'storeId', 'ownerUid', 'employeeUids', 'categories', 'name', 'cnpj', 'address',
           'phone', 'email', 'createdAt'
         ])
         && request.resource.data.storeId == storeId
@@ -41,6 +41,8 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'store_admin'
         && request.resource.data.employeeUids is list
         && request.resource.data.employeeUids.size() == 0
+        && request.resource.data.categories is list
+        && request.resource.data.categories.size() == 0
         && request.resource.data.name is string
         && request.resource.data.name.size() > 1
         && request.resource.data.cnpj is string
@@ -68,6 +70,52 @@ service cloud.firestore {
         && request.resource.data.email is string
         && request.resource.data.createdAt == request.time
         && getAfter(/databases/$(database)/documents/users/$(request.auth.uid)).data.storeId == storeId;
+      allow update: if isOwner()
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'store_admin'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['categories'])
+        && request.resource.data.categories is list
+        && request.resource.data.categories.size() <= 100;
+      allow delete: if false;
+    }
+
+    match /products/{productId} {
+      function isStoreAdmin(storeId) {
+        return request.auth != null
+          && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'store_admin'
+          && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.storeId == storeId
+          && get(/databases/$(database)/documents/store/$(storeId)).data.ownerUid == request.auth.uid;
+      }
+
+      function validProduct(data) {
+        return data.keys().hasOnly([
+            'storeId', 'name', 'description', 'sku', 'category', 'brand', 'model',
+            'isPhysicalProduct', 'stock', 'purchasePrice', 'salePrice', 'lengthCm',
+            'widthCm', 'heightCm', 'weightKg', 'supplier', 'createdAt', 'updatedAt'
+          ])
+          && data.storeId is string
+          && data.name is string && data.name.size() > 0
+          && data.description is string
+          && data.sku is string
+          && data.category is string && data.category.size() > 0
+          && data.brand is string
+          && data.model is string
+          && data.isPhysicalProduct is bool
+          && data.stock is int && data.stock >= 0
+          && data.purchasePrice is number && data.purchasePrice >= 0
+          && data.salePrice is number && data.salePrice >= 0
+          && (data.lengthCm == null || (data.lengthCm is number && data.lengthCm >= 0))
+          && (data.widthCm == null || (data.widthCm is number && data.widthCm >= 0))
+          && (data.heightCm == null || (data.heightCm is number && data.heightCm >= 0))
+          && (data.weightKg == null || (data.weightKg is number && data.weightKg >= 0))
+          && data.supplier is string;
+      }
+
+      allow get, list: if isStoreAdmin(resource.data.storeId);
+      allow create: if isStoreAdmin(request.resource.data.storeId)
+        && validProduct(request.resource.data)
+        && get(/databases/$(database)/documents/store/$(request.resource.data.storeId)).data.categories.hasAny([request.resource.data.category])
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
       allow update, delete: if false;
     }
 

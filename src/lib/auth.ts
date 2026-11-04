@@ -114,6 +114,7 @@ export async function createStoreProfile(user: User, store: StoreProfileInput) {
       storeId: storeRef.id,
       ownerUid: user.uid,
       employeeUids: [],
+      categories: [],
       name: store.name.trim(),
       cnpj: store.cnpj.replace(/[^0-9A-Z]/gi, "").toUpperCase(),
       address: {

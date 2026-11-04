@@ -11,9 +11,9 @@ const helpTopics = [
   {
     number: 1,
     title: "Como cadastrar produtos",
-    description: "Aprenda a adicionar produtos, SKUs e fotos ao catálogo.",
-    href: "/cadastrar-produto",
-    keywords: "produto produtos cadastro sku fotos catálogo",
+    description: "Aprenda a cadastrar produtos, categorias, preços e estoque no catálogo.",
+    href: "/produtos",
+    keywords: "produto produtos cadastro sku categoria preço estoque catálogo",
   },
   {
     number: 2,

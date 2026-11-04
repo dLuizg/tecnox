@@ -1,26 +1,112 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    function signedInWithEmail() {
+      return request.auth != null && request.auth.token.email is string;
+    }
+
+    function currentEmail() {
+      return request.auth.token.email.lower();
+    }
+
+    function currentInvitationPath() {
+      return /databases/$(database)/documents/employeeInvitations/$(currentEmail());
+    }
+
+    function isStoreOwner(storeId) {
+      return request.auth != null
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'store_admin'
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.storeId == storeId
+        && get(/databases/$(database)/documents/store/$(storeId)).data.ownerUid == request.auth.uid;
+    }
+
+    function hasMatchingInvitation(storeId, jobTitle) {
+      return signedInWithEmail()
+        && exists(currentInvitationPath())
+        && get(currentInvitationPath()).data.email == currentEmail()
+        && get(currentInvitationPath()).data.status == 'pending'
+        && get(currentInvitationPath()).data.storeId == storeId
+        && get(currentInvitationPath()).data.jobTitle == jobTitle
+        && get(/databases/$(database)/documents/store/$(storeId)).data.ownerUid == get(currentInvitationPath()).data.ownerUid;
+    }
+
+    function hasPendingInvitationForStore(storeId) {
+      return signedInWithEmail()
+        && exists(currentInvitationPath())
+        && get(currentInvitationPath()).data.email == currentEmail()
+        && get(currentInvitationPath()).data.status == 'pending'
+        && get(currentInvitationPath()).data.storeId == storeId;
+    }
+
+    function isValidTeamRole(jobTitle) {
+      return jobTitle in ['Administrador', 'Gerente', 'Vendedor', 'Financeiro', 'Técnico'];
+    }
+
     match /users/{uid} {
       function isOwner() {
         return request.auth != null && request.auth.uid == uid;
       }
 
+      function isBaseProfile(data) {
+        return data.keys().hasOnly(['uid', 'name', 'email', 'role', 'createdAt'])
+          && data.keys().hasAll(['uid', 'name', 'email', 'role', 'createdAt'])
+          && data.uid == uid
+          && data.name is string
+          && data.email is string
+          && data.role in ['store_admin', 'employee']
+          && data.createdAt == request.time;
+      }
+
+      function isInvitedProfileCreate(data) {
+        return signedInWithEmail()
+          && data.keys().hasOnly(['uid', 'name', 'email', 'role', 'storeId', 'jobTitle', 'createdAt'])
+          && data.keys().hasAll(['uid', 'name', 'email', 'role', 'storeId', 'jobTitle', 'createdAt'])
+          && data.uid == uid
+          && data.name is string
+          && data.email is string
+          && data.email.lower() == currentEmail()
+          && data.role == 'employee'
+          && data.storeId is string
+          && isValidTeamRole(data.jobTitle)
+          && data.createdAt == request.time
+          && hasMatchingInvitation(data.storeId, data.jobTitle)
+          && getAfter(/databases/$(database)/documents/store/$(data.storeId)/members/$(uid)).data.uid == uid;
+      }
+
+      function isProfileEdit() {
+        return signedInWithEmail()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'email', 'phone'])
+          && request.resource.data.name is string
+          && request.resource.data.email is string
+          && request.resource.data.email.lower() == currentEmail()
+          && request.resource.data.phone is string;
+      }
+
+      function isStoreSetupLink() {
+        return resource.data.role == 'store_admin'
+          && !('storeId' in resource.data)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['storeId'])
+          && request.resource.data.storeId is string
+          && getAfter(/databases/$(database)/documents/store/$(request.resource.data.storeId)).data.ownerUid == uid;
+      }
+
+      function isInvitationClaimUpdate() {
+        return signedInWithEmail()
+          && resource.data.role == 'employee'
+          && request.resource.data.role == resource.data.role
+          && request.resource.data.email.lower() == currentEmail()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['storeId', 'jobTitle'])
+          && request.resource.data.storeId is string
+          && isValidTeamRole(request.resource.data.jobTitle)
+          && hasMatchingInvitation(request.resource.data.storeId, request.resource.data.jobTitle)
+          && getAfter(/databases/$(database)/documents/store/$(request.resource.data.storeId)/members/$(uid)).data.uid == uid;
+      }
+
       allow get: if isOwner();
       allow list: if false;
-      allow create: if isOwner()
-        && request.resource.data.keys().hasOnly(['uid', 'name', 'email', 'role', 'createdAt'])
-        && request.resource.data.uid == uid
-        && request.resource.data.name is string
-        && request.resource.data.email is string
-        && request.resource.data.role in ['store_admin', 'employee']
-        && request.resource.data.createdAt == request.time;
-      allow update: if isOwner()
-        && resource.data.role == 'store_admin'
-        && !('storeId' in resource.data)
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['storeId'])
-        && request.resource.data.storeId is string
-        && getAfter(/databases/$(database)/documents/store/$(request.resource.data.storeId)).data.ownerUid == uid;
+      allow create: if isOwner() && isBaseProfile(request.resource.data)
+        || isOwner() && isInvitedProfileCreate(request.resource.data);
+      allow update: if isOwner() && (isProfileEdit() || isStoreSetupLink() || isInvitationClaimUpdate());
       allow delete: if false;
     }
 
@@ -76,6 +162,83 @@ service cloud.firestore {
         && request.resource.data.categories is list
         && request.resource.data.categories.size() <= 100;
       allow delete: if false;
+
+      match /members/{memberUid} {
+        function isClaimingMember() {
+          return signedInWithEmail()
+            && request.auth.uid == memberUid
+            && request.resource.data.keys().hasOnly(['uid', 'storeId', 'email', 'name', 'jobTitle', 'status', 'joinedAt', 'updatedAt'])
+            && request.resource.data.keys().hasAll(['uid', 'storeId', 'email', 'name', 'jobTitle', 'status', 'joinedAt', 'updatedAt'])
+            && request.resource.data.uid == memberUid
+            && request.resource.data.storeId == storeId
+            && request.resource.data.email is string
+            && request.resource.data.email.lower() == currentEmail()
+            && request.resource.data.name is string
+            && isValidTeamRole(request.resource.data.jobTitle)
+            && request.resource.data.status == 'Ativo'
+            && hasMatchingInvitation(storeId, request.resource.data.jobTitle)
+            && getAfter(/databases/$(database)/documents/users/$(memberUid)).data.storeId == storeId
+            && getAfter(/databases/$(database)/documents/users/$(memberUid)).data.role == 'employee';
+        }
+
+        allow get, list: if isStoreOwner(storeId)
+          || (request.auth != null && request.auth.uid == memberUid
+            && ((exists(/databases/$(database)/documents/users/$(memberUid))
+              && get(/databases/$(database)/documents/users/$(memberUid)).data.storeId == storeId)
+              || hasPendingInvitationForStore(storeId)));
+        allow create: if isClaimingMember()
+          && request.resource.data.joinedAt == request.time
+          && request.resource.data.updatedAt == request.time;
+        allow update: if isClaimingMember()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'email', 'jobTitle', 'updatedAt'])
+          && request.resource.data.joinedAt == resource.data.joinedAt
+          && request.resource.data.updatedAt == request.time;
+        allow delete: if false;
+      }
+    }
+
+    match /employeeInvitations/{invitationId} {
+      function isOwnerOfInvitation(data) {
+        return request.auth != null
+          && isStoreOwner(data.storeId);
+      }
+
+      function isInvitee(data) {
+        return signedInWithEmail()
+          && data.email is string
+          && data.email.lower() == currentEmail()
+          && invitationId == currentEmail();
+      }
+
+      function validInvitation(data) {
+        return data.keys().hasOnly(['email', 'storeId', 'ownerUid', 'jobTitle', 'status', 'createdAt', 'updatedAt'])
+          && data.keys().hasAll(['email', 'storeId', 'ownerUid', 'jobTitle', 'status', 'createdAt', 'updatedAt'])
+          && data.email is string
+          && data.email == data.email.lower()
+          && data.email.matches('^[^\\s/@]+@[^\\s/@]+\\.[^\\s/@]+$')
+          && invitationId == data.email
+          && data.storeId is string
+          && data.ownerUid == request.auth.uid
+          && isValidTeamRole(data.jobTitle)
+          && data.status == 'pending'
+          && data.createdAt is timestamp
+          && data.updatedAt == request.time;
+      }
+
+      allow get: if (signedInWithEmail() && invitationId == currentEmail())
+        || isOwnerOfInvitation(resource.data);
+      allow list: if isOwnerOfInvitation(resource.data);
+      allow create: if request.auth != null
+        && isStoreOwner(request.resource.data.storeId)
+        && validInvitation(request.resource.data)
+        && request.resource.data.createdAt == request.time;
+      allow update: if isOwnerOfInvitation(resource.data)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['jobTitle', 'createdAt', 'updatedAt'])
+        && validInvitation(request.resource.data);
+      allow delete: if isOwnerOfInvitation(resource.data)
+        || (isInvitee(resource.data)
+          && getAfter(/databases/$(database)/documents/users/$(request.auth.uid)).data.storeId == resource.data.storeId
+          && getAfter(/databases/$(database)/documents/store/$(resource.data.storeId)/members/$(request.auth.uid)).data.email.lower() == currentEmail());
     }
 
     match /products/{productId} {

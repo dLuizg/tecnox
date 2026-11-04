@@ -17,9 +17,9 @@ type ProfileForm = { name: string; email: string; phone: string; jobTitle: strin
 const fieldClass = "h-[34px] rounded-md border-[#dedede] pl-8 pr-2 text-[11px] shadow-none placeholder:text-neutral-400 focus-visible:border-red-400 focus-visible:ring-red-100 disabled:bg-neutral-50 disabled:text-neutral-500";
 const emptyForm: ProfileForm = { name: "", email: "", phone: "", jobTitle: "" };
 
-function getRoleLabel(role?: string) {
+function getRoleLabel(role?: string, jobTitle?: string) {
   if (role === "store_admin") return "Administrador da loja";
-  if (role === "employee") return "Funcionário";
+  if (role === "employee") return jobTitle || "Funcionário";
   return "";
 }
 
@@ -48,7 +48,7 @@ export default function ProfilePage() {
           name: profile.name,
           email: profile.email,
           phone: profile.phone,
-          jobTitle: getRoleLabel(profile.role),
+          jobTitle: getRoleLabel(profile.role, profile.jobTitle),
         });
       } catch {
         if (!cancelled) setFeedback({ kind: "error", message: "Não foi possível carregar os dados do perfil." });

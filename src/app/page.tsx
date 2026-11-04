@@ -1,24 +1,11 @@
-"use client";
+import Link from "next/link";
+import { ArrowRight, Boxes, ChartNoAxesCombined, UsersRound } from "lucide-react";
 
-import { useEffect } from "react";
-import { onAuthStateChanged } from "firebase/auth";
-import { useRouter } from "next/navigation";
-import { auth } from "@/src/lib/auth";
-
+const features = [
+  { icon: Boxes, title: "Produtos organizados", text: "Cadastre produtos e mantenha as informações da sua loja em um só lugar." },
+  { icon: UsersRound, title: "Clientes e equipe", text: "Organize seus clientes e convide sua equipe para trabalhar com você." },
+  { icon: ChartNoAxesCombined, title: "Visão da operação", text: "Acompanhe os indicadores e as atividades importantes para o seu negócio." },
+];
 export default function Home() {
-  const router = useRouter();
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      router.replace(user ? "/dashboard" : "/signin");
-    });
-
-    return unsubscribe;
-  }, [router]);
-
-  return (
-    <main className="flex min-h-screen items-center justify-center bg-white text-sm text-zinc-600">
-      Carregando...
-    </main>
-  );
+  return <main className="flex-1 bg-white text-neutral-900"><section className="bg-neutral-950 text-white"><div className="mx-auto grid max-w-7xl items-center gap-10 px-5 py-20 sm:px-8 lg:grid-cols-2 lg:py-28"><div><p className="text-sm font-bold uppercase tracking-widest text-red-400">Gestão para sua loja</p><h1 className="mt-5 max-w-xl text-4xl font-bold leading-tight tracking-tight sm:text-5xl">Sua operação, mais simples com a Tecnox.</h1><p className="mt-6 max-w-lg text-lg leading-8 text-neutral-300">Reúna produtos, clientes e equipe em um espaço para acompanhar o dia a dia do seu negócio.</p><div className="mt-8 flex flex-wrap gap-3"><Link href="/signup" className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-5 py-3 font-semibold hover:bg-red-700">Começar agora <ArrowRight size={18} /></Link><Link href="/signin" className="rounded-lg border border-neutral-600 px-5 py-3 font-semibold hover:bg-neutral-800">Já tenho conta</Link></div></div><div className="min-h-72 rounded-3xl bg-cover bg-center" role="img" aria-label="Bancada de manutenção de celulares" style={{backgroundImage:"url('/celular.png')"}} /></div></section><section className="mx-auto max-w-7xl px-5 py-20 sm:px-8"><p className="text-sm font-bold uppercase tracking-widest text-red-600">Feito para o dia a dia</p><h2 className="mt-3 text-3xl font-bold">Tudo começa com uma boa organização.</h2><div className="mt-10 grid gap-6 md:grid-cols-3">{features.map(({icon: Icon, title, text}) => <article key={title} className="rounded-2xl border border-neutral-200 p-6"><Icon className="size-8 text-red-600" /><h3 className="mt-5 text-lg font-bold">{title}</h3><p className="mt-2 leading-7 text-neutral-600">{text}</p></article>)}</div></section></main>;
 }

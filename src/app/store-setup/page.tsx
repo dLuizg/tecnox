@@ -54,9 +54,7 @@ export default function StoreSetupPage() {
         const profile = await getUserProfile(currentUser);
         if (!active) return;
         if (profile.role !== "store_admin") {
-          router.replace("/dashboard");
-        } else if (profile.storeId) {
-          router.replace("/dashboard");
+          router.replace("/store");
         }
       } catch {
         if (active) setFeedback({ kind: "error", message: "Não foi possível verificar sua conta. Atualize a página e tente novamente." });
@@ -101,8 +99,8 @@ export default function StoreSetupPage() {
 
     setIsSaving(true);
     try {
-      await createStoreProfile(user, form);
-      router.replace("/dashboard");
+      const storeId = await createStoreProfile(user, form);
+      router.replace(`/store/${storeId}/dashboard`);
     } catch {
       setFeedback({ kind: "error", message: "Não foi possível salvar os dados da loja. Confira sua conexão e tente novamente." });
     } finally {

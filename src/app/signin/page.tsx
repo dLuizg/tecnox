@@ -52,7 +52,7 @@ export default function LoginPage() {
 
     try {
       await signInWithEmail(email.trim(), password);
-      router.push("/dashboard");
+      router.push("/store");
     } catch (error) {
       setFeedback({ kind: "error", message: getAuthErrorMessage(error) });
     } finally {
@@ -66,7 +66,7 @@ export default function LoginPage() {
 
     try {
       const { isNewUser } = await signInWithGoogle();
-      router.push(isNewUser ? "/signup?completeProfile=1" : "/dashboard");
+      router.push(isNewUser ? "/signup?completeProfile=1" : "/store");
     } catch (error) {
       setFeedback({ kind: "error", message: getAuthErrorMessage(error) });
     } finally {

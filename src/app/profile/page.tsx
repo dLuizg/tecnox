@@ -4,7 +4,6 @@ import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { BriefcaseBusiness, LoaderCircle, Mail, Phone, UserRound } from "lucide-react";
 import { onAuthStateChanged, updateProfile, type User } from "firebase/auth";
-import AppSidebar from "@/src/components/app-sidebar";
 import { Button } from "@/src/components/ui/button";
 import { Card } from "@/src/components/ui/card";
 import { Input } from "@/src/components/ui/input";
@@ -88,11 +87,8 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="flex min-h-screen bg-white text-[#171717]">
-      <AppSidebar className="hidden md:flex" />
-
-      <main className="min-w-0 flex-1 px-5 py-7 sm:px-8 lg:px-[clamp(28px,4vw,52px)] lg:py-10">
-        <div className="mx-auto max-w-[1500px]">
+    <main className="min-h-[calc(100vh-4rem)] bg-white px-5 py-7 text-[#171717] sm:px-8 lg:py-10">
+        <div className="mx-auto max-w-3xl">
           <header className="mb-5">
             <h1 className="text-[17px] font-extrabold tracking-tight">PERFIL</h1>
           </header>
@@ -130,8 +126,7 @@ export default function ProfilePage() {
             </div>
           </form>
         </div>
-      </main>
-    </div>
+    </main>
   );
 }
 

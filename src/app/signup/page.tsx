@@ -71,7 +71,7 @@ export default function CadastroPage() {
     setPendingProfile(profile);
     try {
       await saveUserProfile(user, profile);
-      router.push("/dashboard");
+      router.push("/store");
     } catch {
       setFeedback({ kind: "error", message: "Sua conta foi criada, mas não foi possível salvar seu perfil. Tente novamente." });
     }
@@ -97,7 +97,7 @@ export default function CadastroPage() {
       setPendingProfile(profile);
       try {
         await saveUserProfile(credential.user, profile);
-        router.push("/dashboard");
+        router.push("/store");
       } catch {
         setFeedback({ kind: "error", message: "Sua conta foi criada, mas não foi possível salvar seu perfil. Tente novamente." });
       }
@@ -126,12 +126,12 @@ export default function CadastroPage() {
         setPendingProfile(profile);
         try {
           await saveUserProfile(credential.user, profile);
-          router.push("/dashboard");
+          router.push("/store");
         } catch {
           setFeedback({ kind: "error", message: "Sua conta foi criada, mas não foi possível salvar seu perfil. Tente novamente." });
         }
       } else {
-        router.push("/dashboard");
+        router.push("/store");
       }
     } catch (error) {
       setFeedback({ kind: "error", message: getAuthErrorMessage(error) });

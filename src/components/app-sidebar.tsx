@@ -1,30 +1,22 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { onAuthStateChanged, type User } from "firebase/auth";
+import { doc, onSnapshot } from "firebase/firestore";
+import { db } from "@/src/lib/firebase";
 import {
-  Banknote,
-  ChartNoAxesColumn,
-  CircleDollarSign,
   CircleHelp,
   Clock3,
-  CreditCard,
   LayoutDashboard,
   List,
   LogOut,
   Package,
   RotateCcw,
-  Settings,
   ShoppingCart,
-  Tag,
-  TrendingUp,
-  UserRound,
   UserRoundPlus,
   UsersRound,
-  Wallet,
   type LucideIcon,
 } from "lucide-react";
 import { auth, signOutUser } from "@/src/lib/auth";
@@ -60,7 +52,6 @@ const sections: { label?: string; items: NavItem[] }[] = [
   {
     label: "Ajustes",
     items: [
-      { label: "Perfil", href: "/profile", icon: UserRound },
       { label: "Ajuda", href: "/ajuda", icon: CircleHelp },
     ],
   },
@@ -73,9 +64,20 @@ type AppSidebarProps = {
 export function AppSidebar({ className = "" }: AppSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const storeBase = pathname.match(/^\/store\/([^/]+)/)?.[0];
   const [user, setUser] = useState<User | null>(null);
+  const [isOwner, setIsOwner] = useState(false);
 
-  useEffect(() => onAuthStateChanged(auth, setUser), []);
+  useEffect(() => {
+    let stopProfile = () => {};
+    const stopAuth = onAuthStateChanged(auth, (current) => {
+      stopProfile();
+      setUser(current);
+      setIsOwner(false);
+      if (current) stopProfile = onSnapshot(doc(db, "users", current.uid), (snapshot) => setIsOwner(snapshot.data()?.role === "store_admin"), () => setIsOwner(false));
+    });
+    return () => { stopProfile(); stopAuth(); };
+  }, []);
 
   async function handleSignOut() {
     await signOutUser();
@@ -93,13 +95,9 @@ export function AppSidebar({ className = "" }: AppSidebarProps) {
 
   return (
     <aside
-      className={`flex h-screen w-[236px] shrink-0 flex-col border-r border-[#2b2b2d] bg-[#171719] text-[#c8c8cc] ${className}`}
+      className={`flex h-screen w-[236px] shrink-0 flex-col border-r border-[#2b2b2d] bg-[#1d2028] text-[#c8c8cc] ${className}`}
       aria-label="Navegação principal"
     >
-      <Link href="/dashboard" className="mx-[17px] flex h-[78px] shrink-0 items-center border-b border-[#2a2a2c]" aria-label="Tecnox, início">
-        <Image src="/logo.png" alt="Tecnox" width={160} height={42} priority className="h-auto w-[142px] object-contain object-left" />
-      </Link>
-
       <nav className="min-h-0 flex-1 overflow-y-auto px-[10px] py-2 [scrollbar-width:thin] [scrollbar-color:#414145_transparent]">
         {sections.map((section, sectionIndex) => (
           <div key={section.label ?? "main"} className={sectionIndex === 0 ? "mb-1" : "mb-2.5"}>
@@ -109,12 +107,13 @@ export function AppSidebar({ className = "" }: AppSidebarProps) {
               </h2>
             )}
             <ul className="space-y-0.5">
-              {section.items.map(({ label, href, icon: Icon, badge, badgeTone }) => {
-                const active = pathname === href || (href !== "/dashboard" && href !== "/produtos" && pathname.startsWith(`${href}/`));
+              {section.items.filter((item) => item.href !== "/equipe" || isOwner).map(({ label, href, icon: Icon, badge, badgeTone }) => {
+                const destination = href === "/ajuda" ? href : storeBase ? `${storeBase}${href}` : "/store";
+                const active = pathname === destination || (href !== "/dashboard" && href !== "/produtos" && pathname.startsWith(`${destination}/`));
                 return (
                   <li key={href}>
                     <Link
-                      href={href}
+                      href={destination}
                       aria-current={active ? "page" : undefined}
                       className={`group relative flex h-[31px] items-center gap-2.5 rounded-[9px] px-2.5 text-[11px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e14646] ${
                         active
@@ -142,7 +141,7 @@ export function AppSidebar({ className = "" }: AppSidebarProps) {
       <div className="mx-[17px] flex min-h-[77px] shrink-0 items-center gap-2.5 border-t border-[#2a2a2c]">
         <div className="relative flex size-[34px] shrink-0 items-center justify-center rounded-full border border-[#27e877] text-[10px] text-white">
           {initials || "U"}
-          <span className="absolute bottom-0 right-0 size-2 rounded-full border border-[#171719] bg-[#27e877]" />
+          <span className="absolute bottom-0 right-0 size-2 rounded-full border border-[#1d2028] bg-[#27e877]" />
         </div>
         <div className="min-w-0 flex-1">
           <p className="truncate text-[10px] font-medium text-white">{displayName}</p>

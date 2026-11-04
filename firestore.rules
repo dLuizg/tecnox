@@ -16,8 +16,20 @@ service cloud.firestore {
     function isStoreOwner(storeId) {
       return request.auth != null
         && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'store_admin'
-        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.storeId == storeId
         && get(/databases/$(database)/documents/store/$(storeId)).data.ownerUid == request.auth.uid;
+    }
+
+    function isStoreEmployee(storeId) {
+      return request.auth != null
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'employee'
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.storeId == storeId
+        && get(/databases/$(database)/documents/store/$(storeId)/members/$(request.auth.uid)).data.uid == request.auth.uid
+        && get(/databases/$(database)/documents/store/$(storeId)/members/$(request.auth.uid)).data.storeId == storeId
+        && get(/databases/$(database)/documents/store/$(storeId)/members/$(request.auth.uid)).data.status == 'Ativo';
+    }
+
+    function canWorkInStore(storeId) {
+      return isStoreOwner(storeId) || isStoreEmployee(storeId);
     }
 
     function hasMatchingInvitation(storeId, jobTitle) {
@@ -115,8 +127,8 @@ service cloud.firestore {
         return request.auth != null && request.auth.uid == resource.data.ownerUid;
       }
 
-      allow get: if isOwner();
-      allow list: if false;
+      allow get: if isOwner() || isStoreEmployee(storeId);
+      allow list: if request.auth != null && resource.data.ownerUid == request.auth.uid;
       allow create: if request.auth != null
         && request.resource.data.keys().hasOnly([
           'storeId', 'ownerUid', 'employeeUids', 'categories', 'name', 'cnpj', 'address',
@@ -154,10 +166,8 @@ service cloud.firestore {
         && request.resource.data.address.state.size() == 2
         && request.resource.data.phone is string
         && request.resource.data.email is string
-        && request.resource.data.createdAt == request.time
-        && getAfter(/databases/$(database)/documents/users/$(request.auth.uid)).data.storeId == storeId;
-      allow update: if isOwner()
-        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'store_admin'
+        && request.resource.data.createdAt == request.time;
+      allow update: if canWorkInStore(storeId)
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['categories'])
         && request.resource.data.categories is list
         && request.resource.data.categories.size() <= 100;
@@ -242,13 +252,6 @@ service cloud.firestore {
     }
 
     match /products/{productId} {
-      function isStoreAdmin(storeId) {
-        return request.auth != null
-          && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'store_admin'
-          && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.storeId == storeId
-          && get(/databases/$(database)/documents/store/$(storeId)).data.ownerUid == request.auth.uid;
-      }
-
       function validProduct(data) {
         return data.keys().hasOnly([
             'storeId', 'name', 'description', 'sku', 'category', 'brand', 'model',
@@ -273,8 +276,8 @@ service cloud.firestore {
           && data.supplier is string;
       }
 
-      allow get, list: if isStoreAdmin(resource.data.storeId);
-      allow create: if isStoreAdmin(request.resource.data.storeId)
+      allow get, list: if canWorkInStore(resource.data.storeId);
+      allow create: if canWorkInStore(request.resource.data.storeId)
         && validProduct(request.resource.data)
         && get(/databases/$(database)/documents/store/$(request.resource.data.storeId)).data.categories.hasAny([request.resource.data.category])
         && request.resource.data.createdAt == request.time
@@ -283,13 +286,6 @@ service cloud.firestore {
     }
 
     match /clients/{clientId} {
-      function isStoreAdmin(storeId) {
-        return request.auth != null
-          && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'store_admin'
-          && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.storeId == storeId
-          && get(/databases/$(database)/documents/store/$(storeId)).data.ownerUid == request.auth.uid;
-      }
-
       function validClient(data) {
         return data.keys().hasOnly([
             'storeId', 'name', 'cpf', 'birthDate', 'email', 'phone', 'address', 'createdAt', 'updatedAt'
@@ -312,12 +308,12 @@ service cloud.firestore {
           && data.address.state is string && data.address.state.matches('^[A-Z]{2}$');
       }
 
-      allow get, list: if isStoreAdmin(resource.data.storeId);
-      allow create: if isStoreAdmin(request.resource.data.storeId)
+      allow get, list: if canWorkInStore(resource.data.storeId);
+      allow create: if canWorkInStore(request.resource.data.storeId)
         && validClient(request.resource.data)
         && request.resource.data.createdAt == request.time
         && request.resource.data.updatedAt == request.time;
-      allow update: if isStoreAdmin(resource.data.storeId)
+      allow update: if canWorkInStore(resource.data.storeId)
         && request.resource.data.storeId == resource.data.storeId
         && request.resource.data.createdAt == resource.data.createdAt
         && validClient(request.resource.data)

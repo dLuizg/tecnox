@@ -1,0 +1,123 @@
+"use client";
+
+import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { onAuthStateChanged, type User } from "firebase/auth";
+import { BriefcaseBusiness, LoaderCircle, Mail, Search, UserRoundPlus } from "lucide-react";
+import { useParams, useRouter } from "next/navigation";
+import AppSidebar from "@/src/components/app-sidebar";
+import { auth, createStoreInvitation, getUserProfile, subscribeToStoreTeam, type TeamEntry } from "@/src/lib/auth";
+
+const roles = ["Administrador", "Gerente", "Vendedor", "Financeiro", "Técnico"];
+
+function errorMessage(error: unknown) {
+  const code = typeof error === "object" && error !== null && "code" in error ? String(error.code) : "";
+  if (error instanceof Error && !code) return error.message;
+  if (code.includes("permission-denied")) return "Somente o administrador da loja pode gerenciar a equipe.";
+  if (code.includes("invalid-argument")) return "Confira o e-mail e o cargo selecionado.";
+  return "Não foi possível carregar ou salvar a equipe. Tente novamente.";
+}
+
+export default function TeamPage() {
+  const router = useRouter();
+  const routeStoreId = useParams<{ storeId: string }>().storeId;
+  const [members, setMembers] = useState<TeamEntry[]>([]);
+  const [user, setUser] = useState<User | null>(null);
+  const [email, setEmail] = useState("");
+  const [jobTitle, setJobTitle] = useState("");
+  const [search, setSearch] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [feedback, setFeedback] = useState<{ kind: "error" | "success"; message: string } | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    let unsubscribeTeam = () => {};
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      unsubscribeTeam();
+      unsubscribeTeam = () => {};
+      if (!currentUser) {
+        router.replace("/signin");
+        return;
+      }
+      setUser(currentUser);
+      try {
+        const profile = await getUserProfile(currentUser);
+        if (!active) return;
+        if (profile.role !== "store_admin") {
+          router.replace("/store");
+          return;
+        }
+        unsubscribeTeam = subscribeToStoreTeam(routeStoreId, (result) => {
+          if (active) setMembers(result);
+        }, (error) => {
+          if (active) {
+            setFeedback({ kind: "error", message: errorMessage(error) });
+            setIsLoading(false);
+          }
+        }, () => {
+          if (active) setIsLoading(false);
+        });
+      } catch (error) {
+        if (active) {
+          setFeedback({ kind: "error", message: errorMessage(error) });
+          router.replace("/store");
+        }
+      }
+    });
+    return () => { active = false; unsubscribeTeam(); unsubscribe(); };
+  }, [router, routeStoreId]);
+
+  const filteredMembers = useMemo(() => {
+    const term = search.trim().toLocaleLowerCase("pt-BR");
+    return members.filter((member) => !term || `${member.name} ${member.email} ${member.jobTitle}`.toLocaleLowerCase("pt-BR").includes(term));
+  }, [members, search]);
+
+  async function submitInvite(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setFeedback(null);
+    if (!user) return;
+    setIsSaving(true);
+    try {
+      await createStoreInvitation(user, routeStoreId, email, jobTitle);
+      setEmail("");
+      setJobTitle("");
+      setFeedback({ kind: "success", message: "Convite salvo. O acesso será liberado quando a pessoa estiver online ou entrar na próxima vez." });
+    } catch (error) {
+      setFeedback({ kind: "error", message: errorMessage(error) });
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  return (
+    <div className="flex min-h-screen bg-white text-[#171717]">
+      <AppSidebar className="hidden md:flex" />
+      <main className="min-w-0 flex-1 px-5 py-7 sm:px-8 lg:px-[clamp(28px,4vw,52px)] lg:py-10">
+        <div className="mx-auto max-w-[1500px]">
+          <header className="mb-5"><h1 className="text-[17px] font-extrabold tracking-tight">USUÁRIOS/EQUIPE</h1><p className="mt-1 text-xs text-neutral-500">Convide pessoas para acessar sua loja usando o e-mail da conta.</p></header>
+          <div className="grid items-start gap-5 xl:grid-cols-[304px_minmax(0,1fr)] 2xl:gap-6">
+            <section className="rounded-lg border border-[#e5e5e5] bg-white px-[18px] pb-5 pt-4">
+              <div className="mb-3 flex items-center gap-2 border-b border-neutral-100 pb-2.5"><UserRoundPlus className="size-4 text-[#ed3333]" /><h2 className="text-[11px] font-medium">Adicionar à equipe</h2></div>
+              <form onSubmit={submitInvite} className="space-y-3">
+                <label className="block"><span className="mb-1 block text-[10px] font-medium uppercase text-neutral-600">E-mail da conta</span><span className="relative block"><Mail className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-neutral-500" /><input type="email" autoComplete="email" required value={email} onChange={(event) => setEmail(event.target.value)} placeholder="funcionario@exemplo.com" className="h-9 w-full rounded-md border border-[#dedede] pl-7 pr-2 text-xs outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100" /></span></label>
+                <label className="block"><span className="mb-1 block text-[10px] font-medium uppercase text-neutral-600">Cargo / função</span><span className="relative block"><BriefcaseBusiness className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-neutral-500" /><select required value={jobTitle} onChange={(event) => setJobTitle(event.target.value)} className="h-9 w-full appearance-none rounded-md border border-[#dedede] bg-white pl-7 pr-2 text-xs outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100"><option value="">Selecione um cargo</option>{roles.map((role) => <option key={role}>{role}</option>)}</select></span></label>
+                {feedback && <p role="status" aria-live="polite" className={`rounded-md px-2.5 py-2 text-[11px] ${feedback.kind === "error" ? "bg-red-50 text-red-700" : "bg-green-50 text-green-700"}`}>{feedback.message}</p>}
+                <button type="submit" disabled={isSaving || !user} className="flex h-9 w-full items-center justify-center gap-2 rounded-md bg-[#ed3535] text-xs font-medium text-white hover:bg-red-600 disabled:opacity-60">{isSaving ? <><LoaderCircle className="size-3.5 animate-spin" />Salvando...</> : "Adicionar à loja"}</button>
+              </form>
+              <p className="mt-3 text-[10px] leading-4 text-neutral-500">O acesso é liberado automaticamente para quem estiver usando o app. Quem estiver offline recebe acesso na próxima entrada com este e-mail.</p>
+            </section>
+
+            <section className="flex min-h-[420px] min-w-0 flex-col rounded-lg border border-[#e5e5e5] bg-white">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-neutral-100 px-5 py-3.5"><div><h2 className="text-[11px] font-medium">Equipe da loja</h2><p className="mt-0.5 text-[10px] text-neutral-400">{members.filter((member) => !member.pending).length} vinculados · {members.filter((member) => member.pending).length} convites pendentes</p></div><label className="relative block w-[220px]"><Search className="absolute left-2.5 top-1/2 size-3 -translate-y-1/2 text-neutral-500" /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar por nome, cargo ou e-mail" className="h-8 w-full rounded-md border border-[#dedede] pl-7 pr-2 text-[10px] outline-none focus:border-red-400" /></label></div>
+              <div className="min-w-0 flex-1 overflow-x-auto"><table className="w-full min-w-[520px] text-left"><thead className="bg-[#fafafa] text-[9px] uppercase text-neutral-500"><tr><th className="px-5 py-3 font-medium">Usuário</th><th className="px-2 py-3 font-medium">Cargo / função</th><th className="px-2 py-3 font-medium">Status</th></tr></thead><tbody>
+                {isLoading && <tr><td colSpan={3} className="py-16 text-center text-xs text-neutral-400"><LoaderCircle className="mr-2 inline size-4 animate-spin" />Carregando equipe...</td></tr>}
+                {!isLoading && filteredMembers.map((member) => <tr key={member.id} className="h-12 border-b border-neutral-100 last:border-0"><td className="px-5 py-2"><span className="block text-[11px] font-medium">{member.name || "Funcionário"}</span><span className="block text-[10px] text-neutral-400">{member.email}</span></td><td className="px-2 py-2 text-[10px]">{member.jobTitle}</td><td className="px-2 py-2"><span className={`rounded-full px-2 py-1 text-[9px] ${member.pending ? "bg-amber-50 text-amber-700" : "bg-green-50 text-green-700"}`}>{member.status}</span></td></tr>)}
+                {!isLoading && filteredMembers.length === 0 && <tr><td colSpan={3} className="py-16 text-center text-xs text-neutral-400">{members.length ? "Nenhum usuário encontrado." : "Sua equipe ainda não tem usuários vinculados."}</td></tr>}
+              </tbody></table></div>
+            </section>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}

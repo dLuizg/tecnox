@@ -10,7 +10,7 @@ import {
   signOut,
 } from "firebase/auth";
 import {
-  collection, doc, getDoc, onSnapshot, query, runTransaction,
+  collection, doc, getDoc, getDocs, onSnapshot, query, runTransaction,
   serverTimestamp, setDoc, updateDoc, where,
 } from "firebase/firestore";
 
@@ -68,7 +68,7 @@ const teamRoles = new Set(["Administrador", "Gerente", "Vendedor", "Financeiro",
 const normalizedEmail = (email: string) => email.trim().toLocaleLowerCase("en-US");
 const invitationRefForEmail = (email: string) => doc(db, "employeeInvitations", normalizedEmail(email));
 
-export async function createStoreInvitation(owner: User, emailInput: string, jobTitle: string) {
+export async function createStoreInvitation(owner: User, storeId: string, emailInput: string, jobTitle: string) {
   const email = normalizedEmail(emailInput);
   if (!/^[^\s/@]+@[^\s/@]+\.[^\s/@]+$/.test(email) || !teamRoles.has(jobTitle)) {
     throw new Error("Informe um e-mail e um cargo válidos.");
@@ -76,8 +76,7 @@ export async function createStoreInvitation(owner: User, emailInput: string, job
 
   const profileRef = doc(db, "users", owner.uid);
   const profile = await getDoc(profileRef);
-  const storeId = profile.data()?.storeId;
-  if (!profile.exists() || profile.data()?.role !== "store_admin" || typeof storeId !== "string" || !storeId) {
+  if (!profile.exists() || profile.data()?.role !== "store_admin" || !storeId) {
     throw new Error("Somente o administrador de uma loja pode convidar funcionários.");
   }
 
@@ -261,9 +260,6 @@ export async function createStoreProfile(user: User, store: StoreProfileInput) {
       throw new Error("Only store administrators can create a store profile.");
     }
 
-    const existingStoreId = userSnapshot.data().storeId;
-    if (typeof existingStoreId === "string" && existingStoreId) return existingStoreId;
-
     transaction.set(storeRef, {
       storeId: storeRef.id,
       ownerUid: user.uid,
@@ -284,7 +280,6 @@ export async function createStoreProfile(user: User, store: StoreProfileInput) {
       email: store.email.trim(),
       createdAt: serverTimestamp(),
     });
-    transaction.update(userRef, { storeId: storeRef.id });
     return storeRef.id;
   });
 }
@@ -312,4 +307,21 @@ export function sendPasswordReset(email: string) {
 
 export function signOutUser() {
   return signOut(auth);
+}
+
+export async function listOwnedStores(user: User) {
+  const snapshot = await getDocs(query(collection(db, "store"), where("ownerUid", "==", user.uid)));
+  return snapshot.docs.map((item) => ({ id: item.id, name: String(item.data().name || "Loja"), city: String(item.data().address?.city || ""), state: String(item.data().address?.state || "") }));
+}
+
+export async function canAccessStore(user: User, storeId: string) {
+  const profile = await getUserProfile(user);
+  if (profile.role === "employee") {
+    if (profile.storeId !== storeId) return false;
+    const member = await getDoc(doc(db, "store", storeId, "members", user.uid));
+    return member.exists() && member.data().uid === user.uid && member.data().storeId === storeId && member.data().status === "Ativo";
+  }
+  if (profile.role !== "store_admin") return false;
+  const store = await getDoc(doc(db, "store", storeId));
+  return store.exists() && store.data().ownerUid === user.uid;
 }

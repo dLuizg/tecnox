@@ -173,6 +173,30 @@ service cloud.firestore {
         && request.resource.data.categories.size() <= 100;
       allow delete: if false;
 
+      match /suppliers/{cnpj} {
+        function validSupplier(data) {
+          return data.keys().hasOnly(['name', 'cnpj', 'address', 'email', 'phone', 'description', 'createdAt', 'updatedAt'])
+            && data.keys().hasAll(['name', 'cnpj', 'address', 'email', 'phone', 'description', 'createdAt', 'updatedAt'])
+            && data.name is string && data.name.size() > 0
+            && data.cnpj is string && data.cnpj.matches('^[0-9]{14}$') && data.cnpj == cnpj
+            && data.address is string
+            && data.email is string
+            && data.phone is string && data.phone.matches('^\\(?[0-9]{2}\\)? ?[0-9]{4,5}-?[0-9]{4}$')
+            && data.description is string
+            && data.createdAt is timestamp
+            && data.updatedAt == request.time;
+        }
+
+        allow get, list: if canWorkInStore(storeId);
+        allow create: if canWorkInStore(storeId)
+          && validSupplier(request.resource.data)
+          && request.resource.data.createdAt == request.time;
+        allow update: if canWorkInStore(storeId)
+          && validSupplier(request.resource.data)
+          && request.resource.data.createdAt == resource.data.createdAt;
+        allow delete: if false;
+      }
+
       match /members/{memberUid} {
         function isClaimingMember() {
           return signedInWithEmail()
@@ -273,7 +297,9 @@ service cloud.firestore {
           && (data.widthCm == null || (data.widthCm is number && data.widthCm >= 0))
           && (data.heightCm == null || (data.heightCm is number && data.heightCm >= 0))
           && (data.weightKg == null || (data.weightKg is number && data.weightKg >= 0))
-          && data.supplier is string;
+          && data.supplier is string
+          && (data.supplier == '' || (data.supplier.matches('^[0-9]{14}$')
+            && exists(/databases/$(database)/documents/store/$(data.storeId)/suppliers/$(data.supplier))));
       }
 
       allow get, list: if canWorkInStore(resource.data.storeId);

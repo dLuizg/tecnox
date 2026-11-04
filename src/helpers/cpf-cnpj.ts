@@ -59,3 +59,23 @@ export function isValidCpf(value: string): boolean {
 
     return digits[9] === String(firstDigit) && digits[10] === String(secondDigit);
 }
+
+/** Verifica se um CNPJ numérico completo possui dígitos verificadores válidos. */
+export function isValidCnpj(value: string): boolean {
+    const digits = value.replace(/\D/g, "");
+    if (digits.length !== 14 || /^(\d)\1{13}$/.test(digits)) return false;
+
+    const calculateCheckDigit = (sequence: string, weights: number[]): number => {
+        const sum = [...sequence].reduce(
+            (total, digit, index) => total + Number(digit) * weights[index],
+            0,
+        );
+        const remainder = sum % 11;
+        return remainder < 2 ? 0 : 11 - remainder;
+    };
+
+    const firstDigit = calculateCheckDigit(digits.slice(0, 12), [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]);
+    const secondDigit = calculateCheckDigit(`${digits.slice(0, 12)}${firstDigit}`, [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]);
+
+    return digits.endsWith(`${firstDigit}${secondDigit}`);
+}

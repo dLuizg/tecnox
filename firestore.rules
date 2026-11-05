@@ -381,12 +381,52 @@ service cloud.firestore {
           && request.resource.data.stock == resource.data.stock - line.quantity
           && request.resource.data.stock >= 0;
       }
-      allow update: if request.auth != null
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['stock', 'updatedAt', 'lastSaleId'])
-        && request.resource.data.lastSaleId is string
+      function movementPath(id) {
+        return /databases/$(database)/documents/products/$(productId)/stockMovements/$(id);
+      }
+      function validMovementChange() {
+        let id = request.resource.data.lastMovementId;
+        let movement = getAfter(movementPath(id)).data;
+        return id is string && !exists(movementPath(id))
+          && movement.previousStock == resource.data.stock
+          && movement.resultingStock == request.resource.data.stock
+          && movement.createdBy == request.auth.uid
+          && movement.createdAt == request.time
+          && ((movement.type == 'sale'
+              && request.resource.data.lastSaleId == movement.saleId && validSaleStockChange())
+            || (movement.type in ['entry', 'removal', 'count']
+              && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['lastSaleId'])));
+      }
+      allow update: if canWorkInStore(resource.data.storeId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['stock', 'updatedAt', 'lastSaleId', 'lastMovementId'])
         && request.resource.data.updatedAt == request.time
-        && validSaleStockChange();
+        && validMovementChange();
       allow delete: if false;
+
+      match /stockMovements/{movementId} {
+        function productPath() { return /databases/$(database)/documents/products/$(productId); }
+        function validMovement(data) {
+          let before = get(productPath()).data;
+          let after = getAfter(productPath()).data;
+          return data.keys().hasAll(['type', 'quantity', 'previousStock', 'resultingStock', 'reason', 'saleId', 'createdBy', 'createdAt'])
+            && data.keys().hasOnly(['type', 'quantity', 'previousStock', 'resultingStock', 'reason', 'saleId', 'createdBy', 'createdAt'])
+            && data.type in ['entry', 'removal', 'count', 'sale']
+            && data.quantity is int && data.quantity >= 0
+            && data.previousStock is int && data.previousStock == before.stock
+            && data.resultingStock is int && data.resultingStock >= 0 && data.resultingStock == after.stock
+            && data.reason is string && data.reason.size() <= 500
+            && data.saleId is string && data.createdBy == request.auth.uid && data.createdAt == request.time
+            && before.get('lastMovementId', '') != movementId && after.lastMovementId == movementId
+            && ((data.type == 'entry' && data.quantity > 0 && data.resultingStock == data.previousStock + data.quantity && data.saleId == '')
+              || (data.type == 'removal' && data.quantity > 0 && data.resultingStock == data.previousStock - data.quantity && data.saleId == '')
+              || (data.type == 'count' && data.resultingStock == data.quantity && data.saleId == '')
+              || (data.type == 'sale' && data.quantity > 0 && data.resultingStock == data.previousStock - data.quantity
+                && data.saleId != '' && after.lastSaleId == data.saleId));
+        }
+        allow get, list: if canWorkInStore(get(productPath()).data.storeId);
+        allow create: if canWorkInStore(get(productPath()).data.storeId) && validMovement(request.resource.data);
+        allow update, delete: if false;
+      }
     }
 
     match /clients/{clientId} {

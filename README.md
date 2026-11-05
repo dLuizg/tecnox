@@ -241,6 +241,15 @@ npm install
 
 As credenciais e configurações necessárias do Firebase devem ser adicionadas conforme a configuração do projeto.
 
+Os convites da equipe usam apenas Firebase Authentication e Firestore. Selecione o projeto Firebase correto e publique as regras atualizadas:
+
+```bash
+firebase use <ID_DO_PROJETO>
+firebase deploy --only firestore:rules
+```
+
+Esse fluxo não exige Firebase Functions nem uma chave de serviço no frontend.
+
 As informações sensíveis não devem ser armazenadas diretamente no código-fonte ou publicadas no repositório.
 
 ### Executar o projeto

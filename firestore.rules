@@ -1,0 +1,468 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedInWithEmail() {
+      return request.auth != null && request.auth.token.email is string;
+    }
+
+    function currentEmail() {
+      return request.auth.token.email.lower();
+    }
+
+    function currentInvitationPath() {
+      return /databases/$(database)/documents/employeeInvitations/$(currentEmail());
+    }
+
+    function isStoreOwner(storeId) {
+      return request.auth != null
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'store_admin'
+        && get(/databases/$(database)/documents/store/$(storeId)).data.ownerUid == request.auth.uid;
+    }
+
+    function isStoreEmployee(storeId) {
+      return request.auth != null
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'employee'
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.storeId == storeId
+        && get(/databases/$(database)/documents/store/$(storeId)/members/$(request.auth.uid)).data.uid == request.auth.uid
+        && get(/databases/$(database)/documents/store/$(storeId)/members/$(request.auth.uid)).data.storeId == storeId
+        && get(/databases/$(database)/documents/store/$(storeId)/members/$(request.auth.uid)).data.status == 'Ativo';
+    }
+
+    function canWorkInStore(storeId) {
+      return isStoreOwner(storeId) || isStoreEmployee(storeId);
+    }
+
+    function hasMatchingInvitation(storeId, jobTitle) {
+      return signedInWithEmail()
+        && exists(currentInvitationPath())
+        && get(currentInvitationPath()).data.email == currentEmail()
+        && get(currentInvitationPath()).data.status == 'pending'
+        && get(currentInvitationPath()).data.storeId == storeId
+        && get(currentInvitationPath()).data.jobTitle == jobTitle
+        && get(/databases/$(database)/documents/store/$(storeId)).data.ownerUid == get(currentInvitationPath()).data.ownerUid;
+    }
+
+    function hasPendingInvitationForStore(storeId) {
+      return signedInWithEmail()
+        && exists(currentInvitationPath())
+        && get(currentInvitationPath()).data.email == currentEmail()
+        && get(currentInvitationPath()).data.status == 'pending'
+        && get(currentInvitationPath()).data.storeId == storeId;
+    }
+
+    function isValidTeamRole(jobTitle) {
+      return jobTitle in ['Administrador', 'Gerente', 'Vendedor', 'Financeiro', 'Técnico'];
+    }
+
+    match /users/{uid} {
+      function isOwner() {
+        return request.auth != null && request.auth.uid == uid;
+      }
+
+      function isBaseProfile(data) {
+        return data.keys().hasOnly(['uid', 'name', 'email', 'role', 'createdAt'])
+          && data.keys().hasAll(['uid', 'name', 'email', 'role', 'createdAt'])
+          && data.uid == uid
+          && data.name is string
+          && data.email is string
+          && data.role in ['store_admin', 'employee']
+          && data.createdAt == request.time;
+      }
+
+      function isInvitedProfileCreate(data) {
+        return signedInWithEmail()
+          && data.keys().hasOnly(['uid', 'name', 'email', 'role', 'storeId', 'jobTitle', 'createdAt'])
+          && data.keys().hasAll(['uid', 'name', 'email', 'role', 'storeId', 'jobTitle', 'createdAt'])
+          && data.uid == uid
+          && data.name is string
+          && data.email is string
+          && data.email.lower() == currentEmail()
+          && data.role == 'employee'
+          && data.storeId is string
+          && isValidTeamRole(data.jobTitle)
+          && data.createdAt == request.time
+          && hasMatchingInvitation(data.storeId, data.jobTitle)
+          && getAfter(/databases/$(database)/documents/store/$(data.storeId)/members/$(uid)).data.uid == uid;
+      }
+
+      function isProfileEdit() {
+        return signedInWithEmail()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'email', 'phone'])
+          && request.resource.data.name is string
+          && request.resource.data.email is string
+          && request.resource.data.email.lower() == currentEmail()
+          && request.resource.data.phone is string;
+      }
+
+      function isStoreSetupLink() {
+        return resource.data.role == 'store_admin'
+          && !('storeId' in resource.data)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['storeId'])
+          && request.resource.data.storeId is string
+          && getAfter(/databases/$(database)/documents/store/$(request.resource.data.storeId)).data.ownerUid == uid;
+      }
+
+      function isInvitationClaimUpdate() {
+        return signedInWithEmail()
+          && resource.data.role == 'employee'
+          && request.resource.data.role == resource.data.role
+          && request.resource.data.email.lower() == currentEmail()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['storeId', 'jobTitle'])
+          && request.resource.data.storeId is string
+          && isValidTeamRole(request.resource.data.jobTitle)
+          && hasMatchingInvitation(request.resource.data.storeId, request.resource.data.jobTitle)
+          && getAfter(/databases/$(database)/documents/store/$(request.resource.data.storeId)/members/$(uid)).data.uid == uid;
+      }
+
+      allow get: if isOwner();
+      allow list: if false;
+      allow create: if isOwner() && isBaseProfile(request.resource.data)
+        || isOwner() && isInvitedProfileCreate(request.resource.data);
+      allow update: if isOwner() && (isProfileEdit() || isStoreSetupLink() || isInvitationClaimUpdate());
+      allow delete: if false;
+    }
+
+    match /store/{storeId} {
+      function isOwner() {
+        return request.auth != null && request.auth.uid == resource.data.ownerUid;
+      }
+
+      allow get: if isOwner() || isStoreEmployee(storeId);
+      allow list: if request.auth != null && resource.data.ownerUid == request.auth.uid;
+      allow create: if request.auth != null
+        && request.resource.data.keys().hasOnly([
+          'storeId', 'ownerUid', 'employeeUids', 'categories', 'name', 'cnpj', 'address',
+          'phone', 'email', 'createdAt'
+        ])
+        && request.resource.data.storeId == storeId
+        && request.resource.data.ownerUid == request.auth.uid
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'store_admin'
+        && request.resource.data.employeeUids is list
+        && request.resource.data.employeeUids.size() == 0
+        && request.resource.data.categories is list
+        && request.resource.data.categories.size() == 0
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 1
+        && request.resource.data.cnpj is string
+        && request.resource.data.cnpj.size() == 14
+        && request.resource.data.address is map
+        && request.resource.data.address.keys().hasAll([
+          'cep', 'street', 'number', 'neighborhood', 'city', 'state'
+        ])
+        && request.resource.data.address.keys().hasOnly([
+          'cep', 'street', 'number', 'complement', 'neighborhood', 'city', 'state'
+        ])
+        && request.resource.data.address.cep is string
+        && request.resource.data.address.street is string
+        && request.resource.data.address.number is string
+        && request.resource.data.address.neighborhood is string
+        && request.resource.data.address.city is string
+        && request.resource.data.address.state is string
+        && request.resource.data.address.cep.size() > 0
+        && request.resource.data.address.street.size() > 0
+        && request.resource.data.address.number.size() > 0
+        && request.resource.data.address.neighborhood.size() > 0
+        && request.resource.data.address.city.size() > 0
+        && request.resource.data.address.state.size() == 2
+        && request.resource.data.phone is string
+        && request.resource.data.email is string
+        && request.resource.data.createdAt == request.time;
+      allow update: if canWorkInStore(storeId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['categories'])
+        && request.resource.data.categories is list
+        && request.resource.data.categories.size() <= 100;
+      allow delete: if false;
+
+      match /suppliers/{cnpj} {
+        function validSupplier(data) {
+          return data.keys().hasOnly(['name', 'cnpj', 'address', 'email', 'phone', 'description', 'createdAt', 'updatedAt'])
+            && data.keys().hasAll(['name', 'cnpj', 'address', 'email', 'phone', 'description', 'createdAt', 'updatedAt'])
+            && data.name is string && data.name.size() > 0
+            && data.cnpj is string && data.cnpj.matches('^[0-9]{14}$') && data.cnpj == cnpj
+            && data.address is string
+            && data.email is string
+            && data.phone is string && data.phone.matches('^\\(?[0-9]{2}\\)? ?[0-9]{4,5}-?[0-9]{4}$')
+            && data.description is string
+            && data.createdAt is timestamp
+            && data.updatedAt == request.time;
+        }
+
+        allow get, list: if canWorkInStore(storeId);
+        allow create: if canWorkInStore(storeId)
+          && validSupplier(request.resource.data)
+          && request.resource.data.createdAt == request.time;
+        allow update: if canWorkInStore(storeId)
+          && validSupplier(request.resource.data)
+          && request.resource.data.createdAt == resource.data.createdAt;
+        allow delete: if false;
+      }
+
+      match /members/{memberUid} {
+        function isClaimingMember() {
+          return signedInWithEmail()
+            && request.auth.uid == memberUid
+            && request.resource.data.keys().hasOnly(['uid', 'storeId', 'email', 'name', 'jobTitle', 'status', 'joinedAt', 'updatedAt'])
+            && request.resource.data.keys().hasAll(['uid', 'storeId', 'email', 'name', 'jobTitle', 'status', 'joinedAt', 'updatedAt'])
+            && request.resource.data.uid == memberUid
+            && request.resource.data.storeId == storeId
+            && request.resource.data.email is string
+            && request.resource.data.email.lower() == currentEmail()
+            && request.resource.data.name is string
+            && isValidTeamRole(request.resource.data.jobTitle)
+            && request.resource.data.status == 'Ativo'
+            && hasMatchingInvitation(storeId, request.resource.data.jobTitle)
+            && getAfter(/databases/$(database)/documents/users/$(memberUid)).data.storeId == storeId
+            && getAfter(/databases/$(database)/documents/users/$(memberUid)).data.role == 'employee';
+        }
+
+        allow get, list: if isStoreOwner(storeId)
+          || (request.auth != null && request.auth.uid == memberUid
+            && ((exists(/databases/$(database)/documents/users/$(memberUid))
+              && get(/databases/$(database)/documents/users/$(memberUid)).data.storeId == storeId)
+              || hasPendingInvitationForStore(storeId)));
+        allow create: if isClaimingMember()
+          && request.resource.data.joinedAt == request.time
+          && request.resource.data.updatedAt == request.time;
+        allow update: if isClaimingMember()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'email', 'jobTitle', 'updatedAt'])
+          && request.resource.data.joinedAt == resource.data.joinedAt
+          && request.resource.data.updatedAt == request.time;
+        allow delete: if false;
+      }
+    }
+
+    match /employeeInvitations/{invitationId} {
+      function isOwnerOfInvitation(data) {
+        return request.auth != null
+          && isStoreOwner(data.storeId);
+      }
+
+      function isInvitee(data) {
+        return signedInWithEmail()
+          && data.email is string
+          && data.email.lower() == currentEmail()
+          && invitationId == currentEmail();
+      }
+
+      function validInvitation(data) {
+        return data.keys().hasOnly(['email', 'storeId', 'ownerUid', 'jobTitle', 'status', 'createdAt', 'updatedAt'])
+          && data.keys().hasAll(['email', 'storeId', 'ownerUid', 'jobTitle', 'status', 'createdAt', 'updatedAt'])
+          && data.email is string
+          && data.email == data.email.lower()
+          && data.email.matches('^[^\\s/@]+@[^\\s/@]+\\.[^\\s/@]+$')
+          && invitationId == data.email
+          && data.storeId is string
+          && data.ownerUid == request.auth.uid
+          && isValidTeamRole(data.jobTitle)
+          && data.status == 'pending'
+          && data.createdAt is timestamp
+          && data.updatedAt == request.time;
+      }
+
+      allow get: if (signedInWithEmail() && invitationId == currentEmail())
+        || isOwnerOfInvitation(resource.data);
+      allow list: if isOwnerOfInvitation(resource.data);
+      allow create: if request.auth != null
+        && isStoreOwner(request.resource.data.storeId)
+        && validInvitation(request.resource.data)
+        && request.resource.data.createdAt == request.time;
+      allow update: if isOwnerOfInvitation(resource.data)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['jobTitle', 'createdAt', 'updatedAt'])
+        && validInvitation(request.resource.data);
+      allow delete: if isOwnerOfInvitation(resource.data)
+        || (isInvitee(resource.data)
+          && getAfter(/databases/$(database)/documents/users/$(request.auth.uid)).data.storeId == resource.data.storeId
+          && getAfter(/databases/$(database)/documents/store/$(resource.data.storeId)/members/$(request.auth.uid)).data.email.lower() == currentEmail());
+    }
+
+    match /salesCounters/{storeId} {
+      function salePath() { return /databases/$(database)/documents/sales/$(request.resource.data.lastSaleId); }
+      function validCounter() {
+        let data = request.resource.data;
+        let sale = getAfter(salePath()).data;
+        return data.keys().hasOnly(['lastNumber', 'lastSaleId'])
+          && data.lastNumber is int && data.lastNumber > 0
+          && data.lastSaleId is string && !exists(salePath())
+          && sale.storeId == storeId && sale.orderNumber == data.lastNumber;
+      }
+      allow get: if canWorkInStore(storeId);
+      allow list, delete: if false;
+      allow create: if request.auth != null && request.resource.data.lastNumber == 1 && validCounter();
+      allow update: if request.auth != null && request.resource.data.lastNumber == resource.data.lastNumber + 1 && validCounter();
+    }
+
+    match /sales/{saleId} {
+      function productPath(id) { return /databases/$(database)/documents/products/$(id); }
+      function clientPath(id) { return /databases/$(database)/documents/clients/$(id); }
+      function validLine(data, index) {
+        let item = data.items[index];
+        return item is map && item.productId is string
+          && data.lines[item.productId] == item
+          && getAfter(productPath(item.productId)).data.lastSaleId == saleId;
+      }
+      function lineTotal(data, index) {
+        return data.items.size() > index ? data.items[index].totalCents : 0;
+      }
+      function validSale(data) {
+        return data.keys().hasOnly(['storeId', 'clientId', 'customer', 'items', 'lines', 'totalCents', 'payment', 'status', 'createdBy', 'createdAt', 'updatedAt', 'orderNumber'])
+          && data.storeId is string && data.clientId is string
+          && canWorkInStore(data.storeId)
+          && get(clientPath(data.clientId)).data.storeId == data.storeId
+          && data.customer == get(clientPath(data.clientId)).data.name
+          && data.orderNumber is int && data.orderNumber > 0
+          && getAfter(/databases/$(database)/documents/salesCounters/$(data.storeId)).data.lastNumber == data.orderNumber
+          && getAfter(/databases/$(database)/documents/salesCounters/$(data.storeId)).data.lastSaleId == saleId
+          && data.createdBy == request.auth.uid
+          && saleId.matches(request.auth.uid + '_[A-Za-z0-9-]+')
+          && data.payment in ['Pix', 'Cartão', 'Dinheiro'] && data.status == 'Concluída'
+          && data.createdAt == request.time && data.updatedAt == request.time
+          && data.items is list && data.items.size() >= 1 && data.items.size() <= 5
+          && data.lines is map && data.lines.size() == data.items.size()
+          && validLine(data, 0)
+          && (data.items.size() < 2 || validLine(data, 1))
+          && (data.items.size() < 3 || validLine(data, 2))
+          && (data.items.size() < 4 || validLine(data, 3))
+          && (data.items.size() < 5 || validLine(data, 4))
+          && data.items.toSet().size() == data.items.size()
+          && data.totalCents is int && data.totalCents == lineTotal(data, 0) + lineTotal(data, 1) + lineTotal(data, 2) + lineTotal(data, 3) + lineTotal(data, 4);
+      }
+      allow get: if request.auth != null && (saleId.matches(request.auth.uid + '_[A-Za-z0-9-]+') || canWorkInStore(resource.data.storeId));
+      allow list: if canWorkInStore(resource.data.storeId);
+      allow create: if request.auth != null && validSale(request.resource.data);
+      allow update, delete: if false;
+    }
+
+    match /products/{productId} {
+      function validProduct(data) {
+        return data.keys().hasOnly([
+            'storeId', 'name', 'description', 'sku', 'category', 'brand', 'model',
+            'isPhysicalProduct', 'stock', 'purchasePrice', 'salePrice', 'lengthCm',
+            'widthCm', 'heightCm', 'weightKg', 'supplier', 'createdAt', 'updatedAt'
+          ])
+          && data.storeId is string
+          && data.name is string && data.name.size() > 0
+          && data.description is string
+          && data.sku is string
+          && data.category is string && data.category.size() > 0
+          && data.brand is string
+          && data.model is string
+          && data.isPhysicalProduct is bool
+          && data.stock is int && data.stock >= 0
+          && data.purchasePrice is number && data.purchasePrice >= 0
+          && data.salePrice is number && data.salePrice >= 0
+          && (data.lengthCm == null || (data.lengthCm is number && data.lengthCm >= 0))
+          && (data.widthCm == null || (data.widthCm is number && data.widthCm >= 0))
+          && (data.heightCm == null || (data.heightCm is number && data.heightCm >= 0))
+          && (data.weightKg == null || (data.weightKg is number && data.weightKg >= 0))
+          && data.supplier is string
+          && (data.supplier == '' || (data.supplier.matches('^[0-9]{14}$')
+            && exists(/databases/$(database)/documents/store/$(data.storeId)/suppliers/$(data.supplier))));
+      }
+
+      allow get, list: if canWorkInStore(resource.data.storeId);
+      allow create: if canWorkInStore(request.resource.data.storeId)
+        && validProduct(request.resource.data)
+        && get(/databases/$(database)/documents/store/$(request.resource.data.storeId)).data.categories.hasAny([request.resource.data.category])
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+      function validSaleStockChange() {
+        let saleId = request.resource.data.lastSaleId;
+        let salePath = /databases/$(database)/documents/sales/$(saleId);
+        let sale = getAfter(salePath).data;
+        let line = sale.lines[productId];
+        return !exists(salePath)
+          && sale.storeId == resource.data.storeId
+          && line.keys().hasOnly(['productId', 'name', 'quantity', 'unitPriceCents', 'totalCents'])
+          && line.productId == productId && line.name == resource.data.name
+          && line.quantity is int && line.quantity > 0
+          && line.unitPriceCents is int && line.unitPriceCents >= 0
+          && line.unitPriceCents / 100.0 == resource.data.salePrice
+          && line.totalCents == line.unitPriceCents * line.quantity
+          && request.resource.data.stock == resource.data.stock - line.quantity
+          && request.resource.data.stock >= 0;
+      }
+      function movementPath(id) {
+        return /databases/$(database)/documents/products/$(productId)/stockMovements/$(id);
+      }
+      function validMovementChange() {
+        let id = request.resource.data.lastMovementId;
+        let movement = getAfter(movementPath(id)).data;
+        return id is string && !exists(movementPath(id))
+          && movement.previousStock == resource.data.stock
+          && movement.resultingStock == request.resource.data.stock
+          && movement.createdBy == request.auth.uid
+          && movement.createdAt == request.time
+          && ((movement.type == 'sale'
+              && request.resource.data.lastSaleId == movement.saleId && validSaleStockChange())
+            || (movement.type in ['entry', 'removal', 'count']
+              && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['lastSaleId'])));
+      }
+      allow update: if canWorkInStore(resource.data.storeId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['stock', 'updatedAt', 'lastSaleId', 'lastMovementId'])
+        && request.resource.data.updatedAt == request.time
+        && validMovementChange();
+      allow delete: if false;
+
+      match /stockMovements/{movementId} {
+        function productPath() { return /databases/$(database)/documents/products/$(productId); }
+        function validMovement(data) {
+          let before = get(productPath()).data;
+          let after = getAfter(productPath()).data;
+          return data.keys().hasAll(['type', 'quantity', 'previousStock', 'resultingStock', 'reason', 'saleId', 'createdBy', 'createdAt'])
+            && data.keys().hasOnly(['type', 'quantity', 'previousStock', 'resultingStock', 'reason', 'saleId', 'createdBy', 'createdAt'])
+            && data.type in ['entry', 'removal', 'count', 'sale']
+            && data.quantity is int && data.quantity >= 0
+            && data.previousStock is int && data.previousStock == before.stock
+            && data.resultingStock is int && data.resultingStock >= 0 && data.resultingStock == after.stock
+            && data.reason is string && data.reason.size() <= 500
+            && data.saleId is string && data.createdBy == request.auth.uid && data.createdAt == request.time
+            && before.get('lastMovementId', '') != movementId && after.lastMovementId == movementId
+            && ((data.type == 'entry' && data.quantity > 0 && data.resultingStock == data.previousStock + data.quantity && data.saleId == '')
+              || (data.type == 'removal' && data.quantity > 0 && data.resultingStock == data.previousStock - data.quantity && data.saleId == '')
+              || (data.type == 'count' && data.resultingStock == data.quantity && data.saleId == '')
+              || (data.type == 'sale' && data.quantity > 0 && data.resultingStock == data.previousStock - data.quantity
+                && data.saleId != '' && after.lastSaleId == data.saleId));
+        }
+        allow get, list: if canWorkInStore(get(productPath()).data.storeId);
+        allow create: if canWorkInStore(get(productPath()).data.storeId) && validMovement(request.resource.data);
+        allow update, delete: if false;
+      }
+    }
+
+    match /clients/{clientId} {
+      function validClient(data) {
+        return data.keys().hasOnly([
+            'storeId', 'name', 'cpf', 'birthDate', 'email', 'phone', 'address', 'createdAt', 'updatedAt'
+          ])
+          && data.storeId is string
+          && data.name is string && data.name.size() > 0
+          && data.cpf is string && data.cpf.matches('^[0-9]{11}$')
+          && data.birthDate is string && data.birthDate.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+          && data.email is string
+          && data.phone is string
+          && data.address is map
+          && data.address.keys().hasAll(['cep', 'street', 'number', 'complement', 'neighborhood', 'city', 'state'])
+          && data.address.keys().hasOnly(['cep', 'street', 'number', 'complement', 'neighborhood', 'city', 'state'])
+          && data.address.cep is string && data.address.cep.matches('^[0-9]{5}-?[0-9]{3}$')
+          && data.address.street is string && data.address.street.size() > 0
+          && data.address.number is string && data.address.number.size() > 0
+          && data.address.complement is string
+          && data.address.neighborhood is string && data.address.neighborhood.size() > 0
+          && data.address.city is string && data.address.city.size() > 0
+          && data.address.state is string && data.address.state.matches('^[A-Z]{2}$');
+      }
+
+      allow get, list: if canWorkInStore(resource.data.storeId);
+      allow create: if canWorkInStore(request.resource.data.storeId)
+        && validClient(request.resource.data)
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+      allow update: if canWorkInStore(resource.data.storeId)
+        && request.resource.data.storeId == resource.data.storeId
+        && request.resource.data.createdAt == resource.data.createdAt
+        && validClient(request.resource.data)
+        && request.resource.data.updatedAt == request.time;
+      allow delete: if false;
+    }
+  }
+}

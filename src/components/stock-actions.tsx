@@ -21,12 +21,13 @@ import {
   type StockMovementType,
 } from "@/src/lib/products";
 
-type ManualType = Exclude<StockMovementType, "sale">;
+type ManualType = Exclude<StockMovementType, "sale" | "cancellation">;
 const labels: Record<StockMovementType, string> = {
   entry: "Entrada",
   removal: "Saída",
   count: "Contagem",
   sale: "Venda",
+  cancellation: "Cancelamento de venda",
 };
 
 export function StockActions({

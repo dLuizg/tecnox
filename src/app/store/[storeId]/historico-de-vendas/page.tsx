@@ -15,7 +15,7 @@ import { listSales, type Sale } from "@/src/lib/sales";
 const saleDate = (sale: Sale) => sale.createdAt?.toDate().toLocaleString("pt-BR") ?? "—";
 const itemCount = (sale: Sale) => sale.items.reduce((sum, item) => sum + item.quantity, 0);
 const currency = (value: number) => value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-const inputClass = "h-[30px] rounded-md border-slate-200 bg-white text-[10px] shadow-none placeholder:text-neutral-400 focus-visible:border-red-400 focus-visible:ring-red-100";
+const inputClass = "h-10 rounded-lg border-slate-200 bg-white text-sm shadow-none placeholder:text-slate-400 focus-visible:border-red-400 focus-visible:ring-red-100";
 
 export default function HistoricoDeVendasPage() {
   const { storeId } = useParams<{ storeId: string }>();
@@ -67,22 +67,22 @@ export default function HistoricoDeVendasPage() {
   }
 
   return (
-    <div className="flex min-h-screen bg-white text-neutral-900">
+    <div className="flex min-h-screen bg-[#f5f7fb] text-slate-900">
       <AppSidebar className="hidden md:flex" />
-      <main className="min-w-0 flex-1 px-5 py-8 sm:px-8 lg:px-[clamp(28px,4vw,54px)] lg:py-11">
-        <div className="mx-auto flex min-h-[calc(100vh-88px)] max-w-[1500px] flex-col">
-          <h1 className="mb-5 text-[17px] font-extrabold tracking-tight">HISTÓRICO DE VENDAS</h1>
+      <main className="min-w-0 flex-1 px-4 py-6 sm:px-7 lg:px-8 lg:py-7">
+        <div className="mx-auto flex min-h-[calc(100vh-72px)] max-w-6xl flex-col">
+          <header className="mb-5"><p className="mb-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500">Vendas</p><h1 className="text-xl font-bold tracking-tight">Hist&oacute;rico de vendas</h1><p className="mt-1 text-xs text-slate-500">Consulte e exporte as vendas desta loja.</p></header>
 
           <div className="mb-3 flex flex-wrap items-center gap-2.5">
             <label className="relative min-w-[220px] flex-1 md:max-w-[290px]"><Search className="absolute left-2.5 top-1/2 size-3 -translate-y-1/2 text-neutral-400" /><Input className={`${inputClass} pl-7`} value={search} onChange={(event) => updateFilter(setSearch, event.target.value)} placeholder="Buscar por nº do pedido ou cliente..." /></label>
-            <label className="relative"><select aria-label="Filtrar por período" className="h-[30px] w-[152px] appearance-none rounded-md border border-slate-200 bg-white px-2.5 pr-7 text-[10px] outline-none focus:border-red-300" value={period} onChange={(event) => updateFilter(setPeriod, event.target.value)}><option value="Últimos 30 dias">Período: Últimos 30 dias</option><option value="Últimos 7 dias">Período: Últimos 7 dias</option><option value="Todo período">Período: Todo período</option></select><ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 size-3 -translate-y-1/2" /></label>
-            <label className="relative"><select aria-label="Filtrar por pagamento" className="h-[30px] w-[152px] appearance-none rounded-md border border-slate-200 bg-white px-2.5 pr-7 text-[10px] outline-none focus:border-red-300" value={payment} onChange={(event) => updateFilter(setPayment, event.target.value)}><option value="Todos">Pagamento: Todos</option><option>Pix</option><option>Cartão</option><option>Dinheiro</option></select><ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 size-3 -translate-y-1/2" /></label>
-            <Button type="button" variant="outline" onClick={exportSales} className="ml-auto h-[30px] rounded-md border-slate-200 px-3 text-[10px]"><Download className="size-3" />Exportar</Button>
+            <label className="relative"><select aria-label="Filtrar por período" className="h-10 w-[180px] appearance-none rounded-lg border border-slate-200 bg-white px-3 pr-9 text-sm outline-none focus:border-red-300" value={period} onChange={(event) => updateFilter(setPeriod, event.target.value)}><option value="Últimos 30 dias">Período: Últimos 30 dias</option><option value="Últimos 7 dias">Período: Últimos 7 dias</option><option value="Todo período">Período: Todo período</option></select><ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 size-3 -translate-y-1/2" /></label>
+            <label className="relative"><select aria-label="Filtrar por pagamento" className="h-10 w-[180px] appearance-none rounded-lg border border-slate-200 bg-white px-3 pr-9 text-sm outline-none focus:border-red-300" value={payment} onChange={(event) => updateFilter(setPayment, event.target.value)}><option value="Todos">Pagamento: Todos</option><option>Pix</option><option>Cartão</option><option>Dinheiro</option></select><ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 size-3 -translate-y-1/2" /></label>
+            <Button type="button" variant="outline" onClick={exportSales} className="ml-auto h-10 rounded-lg border-slate-300 px-3 text-xs"><Download className="size-3" />Exportar</Button>
           </div>
 
           {error && <p role="alert" className="mb-3 text-xs text-red-600">{error}</p>}
           {loading && <p className="mb-3 text-xs text-neutral-500">Carregando vendas...</p>}
-          <section className="flex min-h-[570px] flex-1 flex-col overflow-hidden rounded-lg border border-neutral-200 bg-white">
+          <section className="flex min-h-[570px] flex-1 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
             <div className="min-w-0 flex-1 overflow-x-auto">
               <table className="w-full min-w-[850px] table-fixed text-left">
                 <colgroup><col className="w-[9%]" /><col className="w-[17%]" /><col className="w-[15%]" /><col className="w-[8%]" /><col className="w-[10%]" /><col className="w-[10%]" /><col className="w-[20%]" /><col className="w-[11%]" /></colgroup>

@@ -49,7 +49,7 @@ export default function StorePicker() {
         if (!snapshot.exists() || !snapshot.data().role) { router.replace("/signup?completeProfile=1"); return; }
         const profile = snapshot.data();
         if (profile.role === "employee") {
-          if (typeof profile.storeId === "string" && profile.storeId) router.replace(`/store/${encodeURIComponent(profile.storeId)}/dashboard`);
+          if (typeof profile.storeId === "string" && profile.storeId) router.replace(`/store/${encodeURIComponent(profile.storeId)}/produtos`);
           else setStatus("waiting");
           return;
         }
@@ -74,7 +74,7 @@ export default function StorePicker() {
     {status === "error" && loadError && <div role="alert" className="rounded-xl bg-red-50 p-4 text-red-700"><p>{errorMessage(loadError)}</p><button type="button" onClick={retry} className="mt-3 rounded-md border border-red-300 px-3 py-2 text-sm font-semibold hover:bg-red-100">Tentar novamente</button></div>}
     {status === "waiting" && <section className="rounded-2xl border bg-white p-8"><h1 className="text-2xl font-bold">Aguardando convite</h1><p className="mt-3 text-neutral-600">Quando o administrador convidar o e-mail da sua conta, sua loja aparecerá aqui.</p></section>}
     {status === "owner" && <><div className="flex flex-wrap items-end justify-between gap-4"><div><p className="text-sm font-semibold text-red-600">SUAS LOJAS</p><h1 className="mt-2 text-3xl font-bold">Escolha uma loja</h1><p className="mt-2 text-neutral-600">Acesse a operação que deseja gerenciar.</p></div><Link href="/store-setup" className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-3 text-sm font-semibold text-white hover:bg-red-700"><Plus size={18} /> Cadastrar loja</Link></div>
-      {stores.length === 0 ? <div className="mt-8 rounded-2xl border border-dashed border-neutral-300 bg-white p-8 text-neutral-600">Você ainda não cadastrou uma loja. Cadastre a primeira para começar.</div> : <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{stores.map((store) => <Link key={store.id} href={`/store/${encodeURIComponent(store.id)}/dashboard`} className="group rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm transition hover:border-red-300 hover:shadow-md"><Store className="size-8 text-red-600" /><h2 className="mt-5 text-lg font-bold">{store.name}</h2><p className="mt-1 text-sm text-neutral-500">{[store.city, store.state].filter(Boolean).join(" - ")}</p><span className="mt-6 flex items-center gap-2 text-sm font-semibold text-red-600">Acessar loja <ArrowRight size={16} /></span></Link>)}</div>}
+      {stores.length === 0 ? <div className="mt-8 rounded-2xl border border-dashed border-neutral-300 bg-white p-8 text-neutral-600">Você ainda não cadastrou uma loja. Cadastre a primeira para começar.</div> : <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{stores.map((store) => <Link key={store.id} href={`/store/${encodeURIComponent(store.id)}/produtos`} className="group rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm transition hover:border-red-300 hover:shadow-md"><Store className="size-8 text-red-600" /><h2 className="mt-5 text-lg font-bold">{store.name}</h2><p className="mt-1 text-sm text-neutral-500">{[store.city, store.state].filter(Boolean).join(" - ")}</p><span className="mt-6 flex items-center gap-2 text-sm font-semibold text-red-600">Acessar loja <ArrowRight size={16} /></span></Link>)}</div>}
     </>}
   </div></main>;
 }

@@ -31,7 +31,7 @@ const emptyForm: FormState = {
   stock: 0, purchasePrice: "", salePrice: "", lengthCm: "", widthCm: "", heightCm: "", weightKg: "", supplier: "",
 };
 const inputStyle = "h-10 rounded-lg border-[#dce1e8] bg-white text-sm shadow-none placeholder:text-slate-400 focus-visible:border-red-400 focus-visible:ring-red-100";
-const selectStyle = `${inputStyle} w-full px-3`;
+const selectStyle = `${inputStyle} w-full border px-3`;
 
 export default function CadastrarProdutoPage() {
   const router = useRouter();

@@ -15,7 +15,7 @@ import { CheckoutError, completeSale, type Checkout, type Payment } from "@/src/
 type CartLine = { productId: string; quantity: number };
 
 const money = (amount: number) => amount.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-const fieldStyle = "h-[32px] rounded-md border-[#dedede] bg-white text-[10px] shadow-none placeholder:text-neutral-400 focus-visible:border-red-400 focus-visible:ring-red-100";
+const fieldStyle = "h-10 rounded-lg border-slate-200 bg-white text-sm shadow-none placeholder:text-slate-400 focus-visible:border-red-400 focus-visible:ring-red-100";
 
 export default function NovaVendaPage() {
   const { storeId } = useParams<{ storeId: string }>();
@@ -134,27 +134,27 @@ export default function NovaVendaPage() {
   }
 
   return (
-    <div className="flex min-h-screen bg-white text-neutral-900">
+    <div className="flex min-h-screen bg-[#f5f7fb] text-slate-900">
       <AppSidebar className="hidden md:flex" />
-      <main className="min-w-0 flex-1 px-5 py-8 sm:px-7 lg:px-[clamp(28px,4vw,52px)] lg:py-11">
-        <div className="mx-auto max-w-[1500px]">
-          <h1 className="mb-4 text-[17px] font-extrabold tracking-tight">NOVA VENDA</h1>
+      <main className="min-w-0 flex-1 px-4 py-6 sm:px-7 lg:px-8 lg:py-7">
+        <div className="mx-auto max-w-6xl">
+          <header className="mb-5"><p className="mb-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500">Vendas</p><h1 className="text-xl font-bold tracking-tight">Nova venda</h1><p className="mt-1 text-xs text-slate-500">Selecione os produtos e finalize o pedido.</p></header>
 
           {error && <p role="alert" className="mb-3 text-xs text-red-600">{error}</p>}
           {loading && <p className="mb-3 text-xs text-neutral-500">Carregando produtos e clientes...</p>}
           <fieldset disabled={submitting || uncertain || saleComplete} className="grid w-full items-start gap-4 xl:grid-cols-[minmax(0,1fr)_322px] 2xl:gap-[18px]">
             <section className="min-w-0">
-              <div className="mb-3 grid grid-cols-1 gap-2.5 sm:grid-cols-[188px_minmax(0,1fr)]">
-                <label className="relative block"><select aria-label="Cliente da venda" value={customer} onChange={(event) => setCustomer(event.target.value)} className="h-[32px] w-full appearance-none rounded-md border border-[#dedede] bg-white px-2.5 pr-7 text-[10px] outline-none focus:border-red-300"><option value="">Selecione um cliente</option>{customers.map((client) => <option key={client.id} value={client.id}>{client.name}</option>)}</select><ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 size-3 -translate-y-1/2 text-neutral-500" /></label>
-                <label className="relative block"><Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-neutral-400" /><Input className={`${fieldStyle} pl-7`} value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar produto por nome ou SKU..." /></label>
+              <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-[240px_minmax(0,1fr)]">
+                <label className="relative block"><select aria-label="Cliente da venda" value={customer} onChange={(event) => setCustomer(event.target.value)} className="h-10 w-full appearance-none rounded-lg border border-slate-200 bg-white px-3 pr-8 text-sm outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100"><option value="">Selecione um cliente</option>{customers.map((client) => <option key={client.id} value={client.id}>{client.name}</option>)}</select><ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-slate-500" /></label>
+                <label className="relative block"><Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" /><Input className={`${fieldStyle} pl-9`} value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar produto por nome ou SKU..." /></label>
               </div>
 
               <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
                 {visibleProducts.map((product) => {
                   const line = cart.find((item) => item.productId === product.id);
                   const isUnavailable = product.stock === 0 || (line?.quantity ?? 0) >= product.stock || (!line && cart.length >= 5);
-                  return <article key={product.id} className="flex min-h-[65px] items-center gap-2 rounded-lg border border-[#e8e8e8] bg-white px-2 py-1.5 transition hover:border-neutral-300">
-                    <div className="flex size-[49px] shrink-0 items-center justify-center rounded-md bg-[#eeeeee] text-neutral-400"><ShoppingBag className="size-4 opacity-0" aria-hidden="true" /></div>
+                  return <article key={product.id} className="flex min-h-[76px] items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm transition hover:border-slate-300">
+                    <div className="flex size-12 shrink-0 items-center justify-center rounded-lg bg-slate-50 text-slate-400"><ShoppingBag className="size-4 opacity-0" aria-hidden="true" /></div>
                     <div className="min-w-0 flex-1"><h2 className="truncate text-[10px] font-semibold leading-tight">{product.name}</h2><p className="mt-0.5 text-[9px] text-neutral-400">SKU {product.sku}</p><p className="mt-1 text-[11px] font-bold">{money(product.salePrice)}</p></div>
                     <Button type="button" size="icon-sm" aria-label={`Adicionar ${product.name}`} disabled={isUnavailable} onClick={() => addProduct(product)} className="size-[22px] shrink-0 rounded-full bg-[#ed3838] p-0 text-white hover:bg-red-600 disabled:bg-neutral-300"><Plus className="size-3.5" /></Button>
                   </article>;
@@ -163,7 +163,7 @@ export default function NovaVendaPage() {
               </div>
             </section>
 
-            <aside className="flex min-h-[555px] flex-col rounded-lg border border-[#dedede] bg-white p-4">
+            <aside className="flex min-h-[555px] flex-col rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
               <header className="border-b border-neutral-100 pb-2"><p className="mb-1 text-[10px] text-neutral-500">Até 5 produtos diferentes por venda.</p><h2 className="text-[12px] font-bold">Carrinho <span className="ml-1 text-[10px] font-normal text-neutral-400">({totalItems})</span></h2></header>
 
               <div className="min-h-[92px] flex-1 divide-y divide-neutral-100 overflow-y-auto">

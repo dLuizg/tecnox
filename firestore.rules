@@ -303,6 +303,31 @@ service cloud.firestore {
       function lineTotal(data, index) {
         return data.items.size() > index ? data.items[index].totalCents : 0;
       }
+      function restoredLine(data, index) {
+        let item = data.items[index];
+        let before = get(productPath(item.productId)).data;
+        let after = getAfter(productPath(item.productId)).data;
+        let movement = getAfter(/databases/$(database)/documents/products/$(item.productId)/stockMovements/$(after.lastMovementId)).data;
+        return before.storeId == data.storeId
+          && after.stock == before.stock + item.quantity
+          && movement.type == 'cancellation' && movement.saleId == saleId
+          && movement.quantity == item.quantity;
+      }
+      function validCancellation() {
+        let data = request.resource.data;
+        return canWorkInStore(resource.data.storeId)
+          && resource.data.status == 'Concluída' && resource.data.get('cancelled', false) == false
+          && data.diff(resource.data).affectedKeys().hasOnly(['status', 'cancelled', 'cancelledBy', 'cancelledAt', 'updatedAt', 'cancellationReason', 'stockRestored'])
+          && data.status == 'Cancelado' && data.cancelled == true
+          && data.cancelledBy == request.auth.uid && data.cancelledAt == request.time && data.updatedAt == request.time
+          && data.cancellationReason is string && data.cancellationReason.size() > 0 && data.cancellationReason.size() <= 500
+          && data.stockRestored is bool
+          && (!data.stockRestored || (restoredLine(data, 0)
+            && (data.items.size() < 2 || restoredLine(data, 1))
+            && (data.items.size() < 3 || restoredLine(data, 2))
+            && (data.items.size() < 4 || restoredLine(data, 3))
+            && (data.items.size() < 5 || restoredLine(data, 4))));
+      }
       function validSale(data) {
         return data.keys().hasOnly(['storeId', 'clientId', 'customer', 'items', 'lines', 'totalCents', 'payment', 'status', 'createdBy', 'createdAt', 'updatedAt', 'orderNumber'])
           && data.storeId is string && data.clientId is string
@@ -329,7 +354,8 @@ service cloud.firestore {
       allow get: if request.auth != null && (saleId.matches(request.auth.uid + '_[A-Za-z0-9-]+') || canWorkInStore(resource.data.storeId));
       allow list: if canWorkInStore(resource.data.storeId);
       allow create: if request.auth != null && validSale(request.resource.data);
-      allow update, delete: if false;
+      allow update: if request.auth != null && validCancellation();
+      allow delete: if false;
     }
 
     match /products/{productId} {
@@ -394,8 +420,24 @@ service cloud.firestore {
           && movement.createdAt == request.time
           && ((movement.type == 'sale'
               && request.resource.data.lastSaleId == movement.saleId && validSaleStockChange())
+            || (movement.type == 'cancellation'
+              && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['lastSaleId'])
+              && validCancellationStockChange(movement))
             || (movement.type in ['entry', 'removal', 'count']
               && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['lastSaleId'])));
+      }
+      function validCancellationStockChange(movement) {
+        let salePath = /databases/$(database)/documents/sales/$(movement.saleId);
+        let before = get(salePath).data;
+        let after = getAfter(salePath).data;
+        let line = before.lines[productId];
+        return before.storeId == resource.data.storeId && before.status == 'Concluída'
+          && before.get('cancelled', false) == false
+          && after.status == 'Cancelado' && after.cancelled == true && after.stockRestored == true
+          && after.cancelledBy == request.auth.uid && after.cancelledAt == request.time
+          && line.productId == productId && line.quantity == movement.quantity
+          && movement.reason == after.cancellationReason
+          && request.resource.data.stock == resource.data.stock + line.quantity;
       }
       allow update: if canWorkInStore(resource.data.storeId)
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['stock', 'updatedAt', 'lastSaleId', 'lastMovementId'])
@@ -410,7 +452,7 @@ service cloud.firestore {
           let after = getAfter(productPath()).data;
           return data.keys().hasAll(['type', 'quantity', 'previousStock', 'resultingStock', 'reason', 'saleId', 'createdBy', 'createdAt'])
             && data.keys().hasOnly(['type', 'quantity', 'previousStock', 'resultingStock', 'reason', 'saleId', 'createdBy', 'createdAt'])
-            && data.type in ['entry', 'removal', 'count', 'sale']
+            && data.type in ['entry', 'removal', 'count', 'sale', 'cancellation']
             && data.quantity is int && data.quantity >= 0
             && data.previousStock is int && data.previousStock == before.stock
             && data.resultingStock is int && data.resultingStock >= 0 && data.resultingStock == after.stock
@@ -421,7 +463,9 @@ service cloud.firestore {
               || (data.type == 'removal' && data.quantity > 0 && data.resultingStock == data.previousStock - data.quantity && data.saleId == '')
               || (data.type == 'count' && data.resultingStock == data.quantity && data.saleId == '')
               || (data.type == 'sale' && data.quantity > 0 && data.resultingStock == data.previousStock - data.quantity
-                && data.saleId != '' && after.lastSaleId == data.saleId));
+                && data.saleId != '' && after.lastSaleId == data.saleId)
+              || (data.type == 'cancellation' && data.quantity > 0 && data.resultingStock == data.previousStock + data.quantity
+                && data.saleId != ''));
         }
         allow get, list: if canWorkInStore(get(productPath()).data.storeId);
         allow create: if canWorkInStore(get(productPath()).data.storeId) && validMovement(request.resource.data);

@@ -28,7 +28,12 @@ export type Sale = {
   items: SaleItem[];
   totalCents: number;
   payment: Payment;
-  status: "Concluída";
+  status: "Concluída" | "Cancelado";
+  cancelled?: boolean;
+  cancelledBy?: string;
+  cancelledAt?: Timestamp;
+  cancellationReason?: string;
+  stockRestored?: boolean;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 };
@@ -41,6 +46,45 @@ export type Checkout = {
 };
 
 export class CheckoutError extends Error {}
+
+export async function cancelSale(input: { storeId: string; saleId: string; reason: string; restoreStock: boolean }) {
+  const user = auth.currentUser;
+  if (!user) throw new Error("Faça login para cancelar a venda.");
+  const reason = input.reason.trim();
+  if (!reason || reason.length > 500) throw new Error("Informe um motivo com até 500 caracteres.");
+
+  await runTransaction(db, async (transaction) => {
+    const saleRef = doc(db, "sales", input.saleId);
+    const snapshot = await transaction.get(saleRef);
+    if (!snapshot.exists() || snapshot.data().storeId !== input.storeId)
+      throw new Error("Venda não encontrada nesta loja.");
+    const sale = snapshot.data() as Sale;
+    if (sale.status !== "Concluída" || sale.cancelled)
+      throw new Error("Esta venda já foi cancelada ou não pode ser cancelada.");
+
+    const products = input.restoreStock
+      ? await Promise.all(sale.items.map((item) => transaction.get(doc(db, "products", item.productId))))
+      : [];
+    products.forEach((product, index) => {
+      const data = product.data();
+      const item = sale.items[index];
+      if (!data || data.storeId !== input.storeId || !Number.isSafeInteger(data.stock) || !Number.isSafeInteger(data.stock + item.quantity))
+        throw new Error(`Não foi possível devolver ${item.name} ao estoque.`);
+      const movementRef = doc(collection(product.ref, "stockMovements"));
+      const resultingStock = data.stock + item.quantity;
+      transaction.update(product.ref, { stock: resultingStock, updatedAt: serverTimestamp(), lastMovementId: movementRef.id });
+      transaction.set(movementRef, {
+        type: "cancellation", quantity: item.quantity, previousStock: data.stock,
+        resultingStock, reason, saleId: input.saleId, createdBy: user.uid, createdAt: serverTimestamp(),
+      });
+    });
+    transaction.update(saleRef, {
+      status: "Cancelado", cancelled: true, cancelledBy: user.uid,
+      cancelledAt: serverTimestamp(), updatedAt: serverTimestamp(),
+      cancellationReason: reason, stockRestored: input.restoreStock,
+    });
+  });
+}
 
 export async function completeSale(input: Checkout) {
   const user = auth.currentUser;

@@ -95,7 +95,7 @@ export default function HistoricoDeVendasPage() {
                     <td className="px-3">{itemCount(sale)} {itemCount(sale) === 1 ? "item" : "itens"}</td>
                     <td className="whitespace-nowrap px-3 font-semibold">{currency(sale.totalCents / 100)}</td>
                     <td className="px-3">{sale.payment}</td>
-                    <td className="px-3"><span className={`inline-flex min-w-[62px] justify-center rounded px-2 py-1 text-[9px] font-medium ${"bg-[#e7f4e9] text-[#20813a]"}`}>{sale.status}</span></td>
+                    <td className="px-3"><span className={`inline-flex min-w-[62px] justify-center rounded px-2 py-1 text-[9px] font-medium ${sale.status === "Cancelado" || sale.cancelled ? "bg-red-100 text-red-700" : "bg-[#e7f4e9] text-[#20813a]"}`}>{sale.status}</span></td>
                     <td className="px-3"><div className="flex items-center justify-center gap-2"><button type="button" aria-label={`Ver pedido ${sale.orderNumber ?? "sem número"}`} onClick={() => setSelectedSale(sale)} className="rounded p-1 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900"><Eye className="size-3" /></button><button type="button" aria-label={`Imprimir pedido ${sale.orderNumber ?? "sem número"}`} onClick={() => window.print()} className="rounded p-1 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900"><Printer className="size-3" /></button></div></td>
                   </tr>)}
                   {!loading && !error && visibleSales.length === 0 && <tr><td colSpan={8} className="py-16 text-center text-xs text-neutral-400">Nenhuma venda encontrada para esses filtros.</td></tr>}

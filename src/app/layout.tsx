@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import SiteHeader from "@/src/components/site-header";
+import SiteFooter from "@/src/components/site-footer";
 import InvitationClaimListener from "@/src/components/invitation-claim-listener";
 
 const inter = Inter({
@@ -29,6 +30,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <InvitationClaimListener />
         <SiteHeader />
         {children}
+        <SiteFooter />
       </body>
     </html>
   );

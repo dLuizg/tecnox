@@ -100,7 +100,7 @@ export default function StoreSetupPage() {
     setIsSaving(true);
     try {
       const storeId = await createStoreProfile(user, form);
-      router.replace(`/store/${storeId}/dashboard`);
+      router.replace(`/store/${storeId}/produtos`);
     } catch {
       setFeedback({ kind: "error", message: "Não foi possível salvar os dados da loja. Confira sua conexão e tente novamente." });
     } finally {

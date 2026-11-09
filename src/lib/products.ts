@@ -106,7 +106,7 @@ export async function listProducts(storeId: string): Promise<Product[]> {
     );
 }
 
-export type StockMovementType = "entry" | "removal" | "count" | "sale";
+export type StockMovementType = "entry" | "removal" | "count" | "sale" | "cancellation";
 export type StockMovement = {
   id: string;
   type: StockMovementType;
@@ -131,7 +131,7 @@ export class StockChangedError extends Error {
 export async function adjustStock(
   storeId: string,
   productId: string,
-  type: Exclude<StockMovementType, "sale">,
+  type: Exclude<StockMovementType, "sale" | "cancellation">,
   quantity: number,
   reason: string,
   expectedStock: number,

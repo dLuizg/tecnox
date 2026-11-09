@@ -37,7 +37,7 @@ export default function SiteHeader() {
   }, []);
   const displayName = profileName.trim() || user?.displayName?.trim() || user?.email?.split("@")[0] || "Usuário";
   const initials = displayName.split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toLocaleUpperCase("pt-BR");
-  const storeHref = role === "store_admin" ? "/store" : role === "employee" && storeId ? `/store/${encodeURIComponent(storeId)}/dashboard` : undefined;
+  const storeHref = role === "store_admin" ? "/store" : role === "employee" && storeId ? `/store/${encodeURIComponent(storeId)}/produtos` : undefined;
 
   return (
     <header className="relative z-30 border-b border-white/5 bg-[#1d2028] text-white">

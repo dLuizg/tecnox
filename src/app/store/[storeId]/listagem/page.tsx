@@ -157,7 +157,7 @@ export default function ProductListPage() {
     <div className="flex min-h-screen bg-[#f5f7fb] text-slate-900">
       <AppSidebar className="hidden md:flex" />
       <main className="min-w-0 flex-1 px-4 py-6 sm:px-7 lg:px-8 lg:py-7">
-        <div className="mx-auto flex min-h-[calc(100vh-56px)] max-w-[1600px] flex-col">
+        <div className="mx-auto flex min-h-[calc(100vh-56px)] max-w-6xl flex-col">
           <header className="mb-5 flex flex-wrap items-end justify-between gap-4">
             <div>
               <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
@@ -278,7 +278,7 @@ export default function ProductListPage() {
                     <th className="px-2 py-3">Fornecedor</th>
                     <th className="px-2 py-3">Estoque</th>
                     <th className="px-2 py-3">Cadastro</th>
-                    <th className="px-2 py-3">Ações</th>
+                    <th className="px-3 py-3 text-right">Ações</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -351,7 +351,7 @@ export default function ProductListPage() {
                                 .toLocaleDateString("pt-BR")
                             : "—"}
                         </td>
-                        <td className="px-2 py-2">
+                        <td className="px-3 py-2 text-right">
                           <StockActions
                             product={product}
                             onStockChange={(stock) =>

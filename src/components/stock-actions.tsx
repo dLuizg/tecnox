@@ -13,15 +13,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/src/components/ui/dialog";
-import {
-  adjustStock,
-  getProductStock,
-  listStockMovements,
-  StockChangedError,
-  type Product,
-  type StockMovement,
-  type StockMovementType,
-} from "@/src/lib/products";
+import { adjustStock, getProductStock, listStockMovements, StockChangedError } from "@/src/lib/services/products_service";
+import { type Product, type StockMovement, type StockMovementType } from "@/src/lib/types/products_types";
 
 type ManualType = Exclude<StockMovementType, "sale" | "cancellation">;
 const labels: Record<StockMovementType, string> = {

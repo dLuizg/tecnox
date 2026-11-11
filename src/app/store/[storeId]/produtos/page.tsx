@@ -11,8 +11,10 @@ import { Textarea } from "@/src/components/ui/textarea";
 import { formatCurrencyInput } from "@/src/helpers/currency";
 import { formatCnpjInput } from "@/src/helpers/cpf-cnpj";
 import { auth } from "@/src/lib/services/auth_service";
-import { addStoreCategory, createProduct, getStoreCategories, type ProductInput } from "@/src/lib/products";
-import { listSuppliers, type Supplier } from "@/src/lib/suppliers";
+import { addStoreCategory, createProduct, getStoreCategories } from "@/src/lib/services/products_service";
+import { type ProductInput } from "@/src/lib/types/products_types";
+import { listSuppliers } from "@/src/lib/services/suppliers_service";
+import { type Supplier } from "@/src/lib/types/suppliers_types";
 
 type FormState = Omit<ProductInput, "purchasePrice" | "salePrice" | "lengthCm" | "widthCm" | "heightCm" | "weightKg" | "isPhysicalProduct"> & {
   purchasePrice: string;

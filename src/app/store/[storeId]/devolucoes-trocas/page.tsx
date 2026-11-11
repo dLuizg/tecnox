@@ -8,7 +8,8 @@ import AppSidebar from "@/src/components/app-sidebar";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
 import { auth } from "@/src/lib/services/auth_service";
-import { cancelSale, listSales, type Sale } from "@/src/lib/sales";
+import { cancelSale, listSales } from "@/src/lib/services/sales_service";
+import { type Sale } from "@/src/lib/types/sales_types";
 
 const reasons = [
   "Produto não serve",

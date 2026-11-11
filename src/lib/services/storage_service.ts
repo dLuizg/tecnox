@@ -1,11 +1,5 @@
-import { supabase } from "./supabase";
-
-export type UploadFileOptions = {
-  bucket: string;
-  path: string;
-  file: File;
-  upsert?: boolean;
-};
+import { supabase } from "../supabase";
+import type { UploadFileOptions } from "../types/storage_types";
 
 export async function uploadFile({
   bucket,

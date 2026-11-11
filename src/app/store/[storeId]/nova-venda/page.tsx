@@ -8,9 +8,12 @@ import { Input } from "@/src/components/ui/input";
 import { useParams } from "next/navigation";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/src/lib/services/auth_service";
-import { listProducts, type Product } from "@/src/lib/products";
-import { listClients, type Client } from "@/src/lib/clients";
-import { CheckoutError, completeSale, type Checkout, type Payment } from "@/src/lib/sales";
+import { listProducts } from "@/src/lib/services/products_service";
+import { type Product } from "@/src/lib/types/products_types";
+import { listClients } from "@/src/lib/services/clients_service";
+import { type Client } from "@/src/lib/types/clients_types";
+import { CheckoutError, completeSale } from "@/src/lib/services/sales_service";
+import { type Checkout, type Payment } from "@/src/lib/types/sales_types";
 
 type CartLine = { productId: string; quantity: number };
 

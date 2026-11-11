@@ -10,7 +10,8 @@ import { Input } from "@/src/components/ui/input";
 import { useParams } from "next/navigation";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/src/lib/services/auth_service";
-import { listSales, type Sale } from "@/src/lib/sales";
+import { listSales } from "@/src/lib/services/sales_service";
+import { type Sale } from "@/src/lib/types/sales_types";
 
 const saleDate = (sale: Sale) => sale.createdAt?.toDate().toLocaleString("pt-BR") ?? "—";
 const itemCount = (sale: Sale) => sale.items.reduce((sum, item) => sum + item.quantity, 0);

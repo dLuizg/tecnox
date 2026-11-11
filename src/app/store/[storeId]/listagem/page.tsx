@@ -15,8 +15,10 @@ import { StockActions } from "@/src/components/stock-actions";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
 import { auth } from "@/src/lib/services/auth_service";
-import { listProducts, type Product } from "@/src/lib/products";
-import { listSuppliers, type Supplier } from "@/src/lib/suppliers";
+import { listProducts } from "@/src/lib/services/products_service";
+import { type Product } from "@/src/lib/types/products_types";
+import { listSuppliers } from "@/src/lib/services/suppliers_service";
+import { type Supplier } from "@/src/lib/types/suppliers_types";
 
 const pageSize = 8;
 

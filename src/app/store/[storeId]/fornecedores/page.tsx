@@ -11,7 +11,8 @@ import { Textarea } from "@/src/components/ui/textarea";
 import { formatCnpjInput, isValidCnpj } from "@/src/helpers/cpf-cnpj";
 import { formatPhoneInput } from "@/src/helpers/phone";
 import { auth } from "@/src/lib/services/auth_service";
-import { listSuppliers, saveSupplier, type Supplier, type SupplierInput } from "@/src/lib/suppliers";
+import { listSuppliers, saveSupplier } from "@/src/lib/services/suppliers_service";
+import { type Supplier, type SupplierInput } from "@/src/lib/types/suppliers_types";
 
 const emptyForm: SupplierInput = { name: "", cnpj: "", address: "", email: "", phone: "", description: "" };
 const inputClass = "h-10 rounded-lg border-slate-200 bg-white text-sm shadow-none focus-visible:border-red-400 focus-visible:ring-red-100";

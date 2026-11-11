@@ -7,35 +7,10 @@ import {
   updateDoc,
   where,
   doc,
-  type Timestamp,
 } from "firebase/firestore";
-import { db } from "./firebase";
+import { db } from "../firebase";
 
-export type ClientAddress = {
-  cep: string;
-  street: string;
-  number: string;
-  complement: string;
-  neighborhood: string;
-  city: string;
-  state: string;
-};
-
-export type ClientInput = {
-  name: string;
-  cpf: string;
-  birthDate: string;
-  email: string;
-  phone: string;
-  address: ClientAddress;
-};
-
-export type Client = ClientInput & {
-  id: string;
-  storeId: string;
-  createdAt?: Timestamp;
-  updatedAt?: Timestamp;
-};
+import type { Client, ClientInput } from "../types/clients_types";
 
 const clientsCollection = collection(db, "clients");
 

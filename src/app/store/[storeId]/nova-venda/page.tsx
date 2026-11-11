@@ -7,7 +7,7 @@ import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
 import { useParams } from "next/navigation";
 import { onAuthStateChanged } from "firebase/auth";
-import { auth } from "@/src/lib/auth";
+import { auth } from "@/src/lib/services/auth_service";
 import { listProducts, type Product } from "@/src/lib/products";
 import { listClients, type Client } from "@/src/lib/clients";
 import { CheckoutError, completeSale, type Checkout, type Payment } from "@/src/lib/sales";

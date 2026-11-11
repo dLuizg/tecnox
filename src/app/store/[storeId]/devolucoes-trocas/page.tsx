@@ -7,7 +7,7 @@ import { CircleCheck, RotateCcw, Search } from "lucide-react";
 import AppSidebar from "@/src/components/app-sidebar";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
-import { auth } from "@/src/lib/auth";
+import { auth } from "@/src/lib/services/auth_service";
 import { cancelSale, listSales, type Sale } from "@/src/lib/sales";
 
 const reasons = [

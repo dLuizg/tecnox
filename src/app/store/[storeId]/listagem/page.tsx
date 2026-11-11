@@ -14,7 +14,7 @@ import AppSidebar from "@/src/components/app-sidebar";
 import { StockActions } from "@/src/components/stock-actions";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
-import { auth } from "@/src/lib/auth";
+import { auth } from "@/src/lib/services/auth_service";
 import { listProducts, type Product } from "@/src/lib/products";
 import { listSuppliers, type Supplier } from "@/src/lib/suppliers";
 

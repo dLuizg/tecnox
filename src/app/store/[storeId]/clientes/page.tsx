@@ -12,7 +12,7 @@ import AppSidebar from "@/src/components/app-sidebar";
 import { Button } from "@/src/components/ui/button";
 import { Card } from "@/src/components/ui/card";
 import { Input } from "@/src/components/ui/input";
-import { auth } from "@/src/lib/auth";
+import { auth } from "@/src/lib/services/auth_service";
 import { createClient, listClients, updateClient, type Client, type ClientAddress, type ClientInput } from "@/src/lib/clients";
 import { formatCepInput, getCepDigits } from "@/src/helpers/cep";
 import { formatCpfInput, isValidCpf } from "@/src/helpers/cpf-cnpj";

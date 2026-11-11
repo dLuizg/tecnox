@@ -10,7 +10,7 @@ import { Input } from "@/src/components/ui/input";
 import { Textarea } from "@/src/components/ui/textarea";
 import { formatCurrencyInput } from "@/src/helpers/currency";
 import { formatCnpjInput } from "@/src/helpers/cpf-cnpj";
-import { auth } from "@/src/lib/auth";
+import { auth } from "@/src/lib/services/auth_service";
 import { addStoreCategory, createProduct, getStoreCategories, type ProductInput } from "@/src/lib/products";
 import { listSuppliers, type Supplier } from "@/src/lib/suppliers";
 

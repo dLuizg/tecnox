@@ -10,7 +10,8 @@ import { Label } from "@/src/components/ui/label";
 import { formatCnpjInput } from "@/src/helpers/cpf-cnpj";
 import { formatCepInput, getCepDigits } from "@/src/helpers/cep";
 import { formatPhoneInput } from "@/src/helpers/phone";
-import { auth, createStoreProfile, getUserProfile, type StoreProfileInput } from "@/src/lib/auth";
+import { auth, createStoreProfile, getUserProfile } from "@/src/lib/services/auth_service";
+import { type StoreProfileInput } from "@/src/lib/types/auth_types";
 import { useCepLookup } from "@/src/hooks/use-cep-lookup";
 
 type Feedback = { kind: "error" | "success"; message: string } | null;

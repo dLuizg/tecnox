@@ -9,7 +9,7 @@ import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
 import { useParams } from "next/navigation";
 import { onAuthStateChanged } from "firebase/auth";
-import { auth } from "@/src/lib/auth";
+import { auth } from "@/src/lib/services/auth_service";
 import { listSales, type Sale } from "@/src/lib/sales";
 
 const saleDate = (sale: Sale) => sale.createdAt?.toDate().toLocaleString("pt-BR") ?? "—";

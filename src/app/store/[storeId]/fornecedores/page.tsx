@@ -10,7 +10,7 @@ import { Input } from "@/src/components/ui/input";
 import { Textarea } from "@/src/components/ui/textarea";
 import { formatCnpjInput, isValidCnpj } from "@/src/helpers/cpf-cnpj";
 import { formatPhoneInput } from "@/src/helpers/phone";
-import { auth } from "@/src/lib/auth";
+import { auth } from "@/src/lib/services/auth_service";
 import { listSuppliers, saveSupplier, type Supplier, type SupplierInput } from "@/src/lib/suppliers";
 
 const emptyForm: SupplierInput = { name: "", cnpj: "", address: "", email: "", phone: "", description: "" };

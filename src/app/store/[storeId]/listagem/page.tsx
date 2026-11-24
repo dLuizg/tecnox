@@ -1,5 +1,7 @@
 "use client";
 
+import { exportXlsx } from "@/src/lib/export-xlsx";
+
 import { useEffect, useMemo, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { useParams, useRouter } from "next/navigation";
@@ -140,19 +142,7 @@ export default function ProductListPage() {
         product.description,
       ]),
     ];
-    const csv = rows
-      .map((row) =>
-        row.map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(";"),
-      )
-      .join("\n");
-    const url = URL.createObjectURL(
-      new Blob(["\uFEFF", csv], { type: "text/csv;charset=utf-8" }),
-    );
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = "produtos-tecnox.csv";
-    anchor.click();
-    URL.revokeObjectURL(url);
+    void exportXlsx(rows, "produtos-tecnox");
   }
 
   return (
@@ -249,7 +239,7 @@ export default function ProductListPage() {
                 disabled={filtered.length === 0}
                 className="h-9 rounded-md bg-red-600 px-3 text-[11px] font-semibold text-white hover:bg-red-700"
               >
-                Exportar
+                Exportar produtos
               </Button>
             </div>
 

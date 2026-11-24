@@ -1,5 +1,7 @@
 "use client";
 
+import { exportXlsx } from "@/src/lib/export-xlsx";
+
 import { useEffect, useMemo, useState } from "react";
 import {
   ChevronDown, ChevronLeft, ChevronRight, Download, Eye, Printer, Search, X,
@@ -9,8 +11,9 @@ import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
 import { useParams } from "next/navigation";
 import { onAuthStateChanged } from "firebase/auth";
-import { auth } from "@/src/lib/auth";
-import { listSales, type Sale } from "@/src/lib/sales";
+import { auth } from "@/src/lib/services/auth_service";
+import { listSales } from "@/src/lib/services/sales_service";
+import { type Sale } from "@/src/lib/types/sales_types";
 
 const saleDate = (sale: Sale) => sale.createdAt?.toDate().toLocaleString("pt-BR") ?? "—";
 const itemCount = (sale: Sale) => sale.items.reduce((sum, item) => sum + item.quantity, 0);
@@ -52,13 +55,7 @@ export default function HistoricoDeVendasPage() {
 
   function exportSales() {
     const rows = [["Pedido", "Cliente", "Data/hora", "Itens", "Valor total", "Pagamento", "Status"], ...filteredSales.map((sale) => [String(sale.orderNumber ?? ""), sale.customer, saleDate(sale), String(itemCount(sale)), currency(sale.totalCents / 100), sale.payment, sale.status])];
-    const csv = rows.map((row) => row.map((cell) => `"${cell.replaceAll('"', '""')}"`).join(";")).join("\n");
-    const url = URL.createObjectURL(new Blob(["\uFEFF", csv], { type: "text/csv;charset=utf-8" }));
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = "historico-de-vendas.csv";
-    anchor.click();
-    URL.revokeObjectURL(url);
+    void exportXlsx(rows, "historico-de-vendas");
   }
 
   function updateFilter<T>(setter: (value: T) => void, value: T) {
@@ -77,7 +74,7 @@ export default function HistoricoDeVendasPage() {
             <label className="relative min-w-[220px] flex-1 md:max-w-[290px]"><Search className="absolute left-2.5 top-1/2 size-3 -translate-y-1/2 text-neutral-400" /><Input className={`${inputClass} pl-7`} value={search} onChange={(event) => updateFilter(setSearch, event.target.value)} placeholder="Buscar por nº do pedido ou cliente..." /></label>
             <label className="relative"><select aria-label="Filtrar por período" className="h-10 w-[180px] appearance-none rounded-lg border border-slate-200 bg-white px-3 pr-9 text-sm outline-none focus:border-red-300" value={period} onChange={(event) => updateFilter(setPeriod, event.target.value)}><option value="Últimos 30 dias">Período: Últimos 30 dias</option><option value="Últimos 7 dias">Período: Últimos 7 dias</option><option value="Todo período">Período: Todo período</option></select><ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 size-3 -translate-y-1/2" /></label>
             <label className="relative"><select aria-label="Filtrar por pagamento" className="h-10 w-[180px] appearance-none rounded-lg border border-slate-200 bg-white px-3 pr-9 text-sm outline-none focus:border-red-300" value={payment} onChange={(event) => updateFilter(setPayment, event.target.value)}><option value="Todos">Pagamento: Todos</option><option>Pix</option><option>Cartão</option><option>Dinheiro</option></select><ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 size-3 -translate-y-1/2" /></label>
-            <Button type="button" variant="outline" onClick={exportSales} className="ml-auto h-10 rounded-lg border-slate-300 px-3 text-xs"><Download className="size-3" />Exportar</Button>
+            <Button type="button" variant="outline" onClick={exportSales} disabled={!filteredSales.length} className="ml-auto h-10 rounded-lg border-slate-300 px-3 text-xs"><Download className="size-3" />Exportar vendas</Button>
           </div>
 
           {error && <p role="alert" className="mb-3 text-xs text-red-600">{error}</p>}

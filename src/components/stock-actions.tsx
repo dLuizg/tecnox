@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { History, SlidersHorizontal } from "lucide-react";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/src/components/ui/tooltip";
 import {
   Dialog,
   DialogContent,
@@ -11,15 +13,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/src/components/ui/dialog";
-import {
-  adjustStock,
-  getProductStock,
-  listStockMovements,
-  StockChangedError,
-  type Product,
-  type StockMovement,
-  type StockMovementType,
-} from "@/src/lib/products";
+import { adjustStock, getProductStock, listStockMovements, StockChangedError } from "@/src/lib/services/products_service";
+import { type Product, type StockMovement, type StockMovementType } from "@/src/lib/types/products_types";
 
 type ManualType = Exclude<StockMovementType, "sale" | "cancellation">;
 const labels: Record<StockMovementType, string> = {
@@ -136,26 +131,26 @@ export function StockActions({
   }
   return (
     <>
-      <div className="flex flex-wrap gap-1">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="h-7 text-[10px]"
-          onClick={openAdjust}
-        >
-          Ajustar estoque
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="h-7 text-[10px]"
-          onClick={openHistory}
-        >
-          Histórico
-        </Button>
-      </div>
+      <TooltipProvider>
+        <div className="flex justify-end gap-1">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button type="button" variant="outline" size="icon" className="size-7" aria-label="Ajustar estoque" onClick={openAdjust}>
+                <SlidersHorizontal className="size-4" aria-hidden="true" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Ajustar estoque</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button type="button" variant="outline" size="icon" className="size-7" aria-label="Histórico de estoque" onClick={openHistory}>
+                <History className="size-4" aria-hidden="true" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Histórico de estoque</TooltipContent>
+          </Tooltip>
+        </div>
+      </TooltipProvider>
       {notice && (
         <span role="status" className="text-[10px] text-emerald-700">
           {notice}

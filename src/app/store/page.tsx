@@ -6,7 +6,7 @@ import { onAuthStateChanged } from "firebase/auth";
 import { doc, onSnapshot } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import { ArrowRight, Plus, Store } from "lucide-react";
-import { auth, listOwnedStores } from "@/src/lib/auth";
+import { auth, listOwnedStores } from "@/src/lib/services/auth_service";
 import { db } from "@/src/lib/firebase";
 
 type StoreItem = Awaited<ReturnType<typeof listOwnedStores>>[number];

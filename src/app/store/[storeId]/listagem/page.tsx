@@ -1,5 +1,7 @@
 "use client";
 
+import { exportXlsx } from "@/src/lib/export-xlsx";
+
 import { useEffect, useMemo, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { useParams, useRouter } from "next/navigation";
@@ -14,9 +16,11 @@ import AppSidebar from "@/src/components/app-sidebar";
 import { StockActions } from "@/src/components/stock-actions";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
-import { auth } from "@/src/lib/auth";
-import { listProducts, type Product } from "@/src/lib/products";
-import { listSuppliers, type Supplier } from "@/src/lib/suppliers";
+import { auth } from "@/src/lib/services/auth_service";
+import { listProducts } from "@/src/lib/services/products_service";
+import { type Product } from "@/src/lib/types/products_types";
+import { listSuppliers } from "@/src/lib/services/suppliers_service";
+import { type Supplier } from "@/src/lib/types/suppliers_types";
 
 const pageSize = 8;
 
@@ -138,26 +142,14 @@ export default function ProductListPage() {
         product.description,
       ]),
     ];
-    const csv = rows
-      .map((row) =>
-        row.map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(";"),
-      )
-      .join("\n");
-    const url = URL.createObjectURL(
-      new Blob(["\uFEFF", csv], { type: "text/csv;charset=utf-8" }),
-    );
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = "produtos-tecnox.csv";
-    anchor.click();
-    URL.revokeObjectURL(url);
+    void exportXlsx(rows, "produtos-tecnox");
   }
 
   return (
     <div className="flex min-h-screen bg-[#f5f7fb] text-slate-900">
       <AppSidebar className="hidden md:flex" />
       <main className="min-w-0 flex-1 px-4 py-6 sm:px-7 lg:px-8 lg:py-7">
-        <div className="mx-auto flex min-h-[calc(100vh-56px)] max-w-[1600px] flex-col">
+        <div className="mx-auto flex min-h-[calc(100vh-56px)] max-w-6xl flex-col">
           <header className="mb-5 flex flex-wrap items-end justify-between gap-4">
             <div>
               <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
@@ -247,7 +239,7 @@ export default function ProductListPage() {
                 disabled={filtered.length === 0}
                 className="h-9 rounded-md bg-red-600 px-3 text-[11px] font-semibold text-white hover:bg-red-700"
               >
-                Exportar
+                Exportar produtos
               </Button>
             </div>
 
@@ -278,7 +270,7 @@ export default function ProductListPage() {
                     <th className="px-2 py-3">Fornecedor</th>
                     <th className="px-2 py-3">Estoque</th>
                     <th className="px-2 py-3">Cadastro</th>
-                    <th className="px-2 py-3">Ações</th>
+                    <th className="px-3 py-3 text-right">Ações</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -351,7 +343,7 @@ export default function ProductListPage() {
                                 .toLocaleDateString("pt-BR")
                             : "—"}
                         </td>
-                        <td className="px-2 py-2">
+                        <td className="px-3 py-2 text-right">
                           <StockActions
                             product={product}
                             onStockChange={(stock) =>

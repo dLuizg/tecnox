@@ -19,7 +19,7 @@ import {
   UsersRound,
   type LucideIcon,
 } from "lucide-react";
-import { auth, signOutUser } from "@/src/lib/auth";
+import { auth, signOutUser } from "@/src/lib/services/auth_service";
 
 type NavItem = {
   label: string;

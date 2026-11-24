@@ -3,7 +3,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { useParams, usePathname, useRouter } from "next/navigation";
-import { auth, canAccessStore, getUserProfile } from "@/src/lib/auth";
+import { auth, canAccessStore, getUserProfile } from "@/src/lib/services/auth_service";
 
 export default function StoreLayout({ children }: { children: ReactNode }) {
   const { storeId } = useParams<{ storeId: string }>();

@@ -5,7 +5,8 @@ import { onAuthStateChanged, type User } from "firebase/auth";
 import { BriefcaseBusiness, LoaderCircle, Mail, Search, UserRoundPlus } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import AppSidebar from "@/src/components/app-sidebar";
-import { auth, createStoreInvitation, getUserProfile, subscribeToStoreTeam, type TeamEntry } from "@/src/lib/auth";
+import { auth, createStoreInvitation, getUserProfile, subscribeToStoreTeam } from "@/src/lib/services/auth_service";
+import { type TeamEntry } from "@/src/lib/types/auth_types";
 
 const roles = ["Administrador", "Gerente", "Vendedor", "Financeiro", "Técnico"];
 

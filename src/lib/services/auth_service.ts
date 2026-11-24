@@ -14,55 +14,11 @@ import {
   serverTimestamp, setDoc, updateDoc, where,
 } from "firebase/firestore";
 
-import app, { db } from "./firebase";
-
-export type UserRole = "store_admin" | "employee";
-
-export type UserProfileInput = {
-  name: string;
-  email: string;
-  role: UserRole;
-};
-
-export type UserProfile = {
-  uid: string;
-  name: string;
-  email: string;
-  role?: UserRole;
-  phone: string;
-  storeId?: string;
-  jobTitle?: string;
-};
-
-export type StoreProfileInput = {
-  name: string;
-  cnpj: string;
-  address: {
-    cep: string;
-    street: string;
-    number: string;
-    complement: string;
-    neighborhood: string;
-    city: string;
-    state: string;
-  };
-  phone: string;
-  email: string;
-};
-
-export type EditableUserProfile = Pick<UserProfile, "name" | "phone">;
+import app, { db } from "../firebase";
+import type { EditableUserProfile, StoreProfileInput, TeamEntry, UserProfile, UserProfileInput } from "../types/auth_types";
 
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
-
-export type TeamEntry = {
-  id: string;
-  name: string;
-  email: string;
-  jobTitle: string;
-  status: "Ativo" | "Pendente";
-  pending: boolean;
-};
 
 const teamRoles = new Set(["Administrador", "Gerente", "Vendedor", "Financeiro", "Técnico"]);
 const normalizedEmail = (email: string) => email.trim().toLocaleLowerCase("en-US");

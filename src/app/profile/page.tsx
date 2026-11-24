@@ -8,7 +8,7 @@ import { Button } from "@/src/components/ui/button";
 import { Card } from "@/src/components/ui/card";
 import { Input } from "@/src/components/ui/input";
 import { formatPhoneInput } from "@/src/helpers/phone";
-import { auth, getUserProfile, updateUserProfile } from "@/src/lib/auth";
+import { auth, getUserProfile, updateUserProfile } from "@/src/lib/services/auth_service";
 
 type Feedback = { kind: "error" | "success"; message: string } | null;
 type ProfileForm = { name: string; email: string; phone: string; jobTitle: string };

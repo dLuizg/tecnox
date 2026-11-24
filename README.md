@@ -14,7 +14,6 @@ O sistema busca facilitar o controle das operações da loja, centralizando as i
 
 * **Eduardo Baldo**
 * **Luiz Gustavo P. Diniz**
-* **Matteo E. F. Bonvento**
 
 **Instituição:** UNIFEOB
 **Módulo:** Desenvolvimento de Aplicações Web

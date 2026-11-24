@@ -5,25 +5,10 @@ import {
   getDocs,
   serverTimestamp,
   setDoc,
-  type Timestamp,
 } from "firebase/firestore";
-import { db } from "./firebase";
+import { db } from "../firebase";
+import type { Supplier, SupplierInput } from "../types/suppliers_types";
 import { isValidCnpj } from "@/src/helpers/cpf-cnpj";
-
-export type SupplierInput = {
-  name: string;
-  cnpj: string;
-  address: string;
-  email: string;
-  phone: string;
-  description: string;
-};
-
-export type Supplier = SupplierInput & {
-  id: string;
-  createdAt?: Timestamp;
-  updatedAt?: Timestamp;
-};
 
 export function normalizeCnpj(value: string): string {
   return value.replace(/\D/g, "");

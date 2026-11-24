@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { onAuthStateChanged } from "firebase/auth";
-import { auth, claimStoreInvitation, subscribeToStoreInvitation } from "@/src/lib/auth";
+import { auth, claimStoreInvitation, subscribeToStoreInvitation } from "@/src/lib/services/auth_service";
 
 export default function InvitationClaimListener() {
   useEffect(() => {

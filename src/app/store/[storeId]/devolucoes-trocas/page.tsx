@@ -7,8 +7,9 @@ import { CircleCheck, RotateCcw, Search } from "lucide-react";
 import AppSidebar from "@/src/components/app-sidebar";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
-import { auth } from "@/src/lib/auth";
-import { cancelSale, listSales, type Sale } from "@/src/lib/sales";
+import { auth } from "@/src/lib/services/auth_service";
+import { cancelSale, listSales } from "@/src/lib/services/sales_service";
+import { type Sale } from "@/src/lib/types/sales_types";
 
 const reasons = [
   "Produto não serve",
@@ -123,8 +124,8 @@ export default function DevolucoesTrocasPage() {
     <div className="flex min-h-screen bg-[#f5f7fb] text-slate-900">
       <AppSidebar className="hidden md:flex" />
 
-      <main className="min-w-0 flex-1 px-5 py-7 sm:px-8 lg:px-[clamp(28px,4vw,54px)] lg:py-10">
-        <div className="mx-auto max-w-[1500px]">
+      <main className="min-w-0 flex-1 px-4 py-6 sm:px-7 lg:px-8 lg:py-7">
+        <div className="mx-auto max-w-6xl">
           <h1 className="mb-4 text-[17px] font-extrabold tracking-tight">
             DEVOLUÇÃO DE VENDA
           </h1>

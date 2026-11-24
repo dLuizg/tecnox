@@ -6,44 +6,10 @@ import {
   runTransaction,
   serverTimestamp,
   where,
-  type Timestamp,
 } from "firebase/firestore";
-import { auth } from "./auth";
-import { db } from "./firebase";
-
-export type Payment = "Pix" | "Cartão" | "Dinheiro";
-export type SaleItem = {
-  productId: string;
-  name: string;
-  quantity: number;
-  unitPriceCents: number;
-  totalCents: number;
-};
-export type Sale = {
-  id: string;
-  orderNumber: number;
-  storeId: string;
-  clientId: string;
-  customer: string;
-  items: SaleItem[];
-  totalCents: number;
-  payment: Payment;
-  status: "Concluída" | "Cancelado";
-  cancelled?: boolean;
-  cancelledBy?: string;
-  cancelledAt?: Timestamp;
-  cancellationReason?: string;
-  stockRestored?: boolean;
-  createdAt: Timestamp;
-  updatedAt: Timestamp;
-};
-export type Checkout = {
-  storeId: string;
-  clientId: string;
-  saleId: string;
-  payment: Payment;
-  items: { productId: string; quantity: number; priceCents: number }[];
-};
+import { auth } from "./auth_service";
+import { db } from "../firebase";
+import type { Sale, SaleItem, Checkout } from "../types/sales_types";
 
 export class CheckoutError extends Error {}
 

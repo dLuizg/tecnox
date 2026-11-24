@@ -1,5 +1,7 @@
 "use client";
 
+import { exportXlsx } from "@/src/lib/export-xlsx";
+
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { useParams, useRouter } from "next/navigation";
@@ -10,8 +12,9 @@ import { Input } from "@/src/components/ui/input";
 import { Textarea } from "@/src/components/ui/textarea";
 import { formatCnpjInput, isValidCnpj } from "@/src/helpers/cpf-cnpj";
 import { formatPhoneInput } from "@/src/helpers/phone";
-import { auth } from "@/src/lib/auth";
-import { listSuppliers, saveSupplier, type Supplier, type SupplierInput } from "@/src/lib/suppliers";
+import { auth } from "@/src/lib/services/auth_service";
+import { listSuppliers, saveSupplier } from "@/src/lib/services/suppliers_service";
+import { type Supplier, type SupplierInput } from "@/src/lib/types/suppliers_types";
 
 const emptyForm: SupplierInput = { name: "", cnpj: "", address: "", email: "", phone: "", description: "" };
 const inputClass = "h-10 rounded-lg border-slate-200 bg-white text-sm shadow-none focus-visible:border-red-400 focus-visible:ring-red-100";
@@ -80,16 +83,14 @@ export default function FornecedoresPage() {
 
   function exportCsv() {
     const rows = [["Nome", "CNPJ", "Endereço", "E-mail", "Telefone", "Descrição"], ...filtered.map((item) => [item.name, item.cnpj, item.address, item.email, item.phone, item.description])];
-    const csv = rows.map((row) => row.map((cell) => `"${cell.replaceAll('"', '""')}"`).join(";")).join("\n");
-    const url = URL.createObjectURL(new Blob(["\uFEFF", csv], { type: "text/csv;charset=utf-8" }));
-    const anchor = document.createElement("a"); anchor.href = url; anchor.download = "fornecedores-tecnox.csv"; anchor.click(); URL.revokeObjectURL(url);
+    void exportXlsx(rows, "fornecedores-tecnox");
   }
 
   return <div className="flex min-h-screen bg-[#f5f7fb] text-slate-900">
     <AppSidebar className="hidden md:flex" />
     <main className="min-w-0 flex-1 px-4 py-6 sm:px-7 lg:px-8 lg:py-7">
       <div className="mx-auto max-w-6xl">
-        <header className="mb-5 flex flex-wrap items-end justify-between gap-3"><div><p className="mb-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500">Administração</p><h1 className="text-xl font-bold tracking-tight">Fornecedores</h1><p className="mt-1 text-xs text-slate-500">Cadastre e consulte os fornecedores desta loja.</p></div><Button onClick={exportCsv} variant="outline" className="h-9 border-slate-300 text-xs" disabled={!filtered.length}><Download className="size-4" />Exportar CSV</Button></header>
+        <header className="mb-5 flex flex-wrap items-end justify-between gap-3"><div><p className="mb-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500">Administração</p><h1 className="text-xl font-bold tracking-tight">Fornecedores</h1><p className="mt-1 text-xs text-slate-500">Cadastre e consulte os fornecedores desta loja.</p></div><Button onClick={exportCsv} variant="outline" className="h-9 border-slate-300 text-xs" disabled={!filtered.length}><Download className="size-4" />Exportar fornecedores</Button></header>
         <div className="grid items-start gap-5 lg:grid-cols-[350px_minmax(0,1fr)]">
           <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"><h2 className="mb-4 flex items-center gap-2 text-sm font-semibold"><Building2 className="size-4 text-red-600" />{editing ? "Editar fornecedor" : "Novo fornecedor"}</h2>
             <form onSubmit={submit} className="space-y-3">

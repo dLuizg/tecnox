@@ -8,7 +8,8 @@ import { ChevronDown, LogOut, UserRound } from "lucide-react";
 import { DropdownMenu } from "radix-ui";
 import { doc, onSnapshot } from "firebase/firestore";
 import { db } from "@/src/lib/firebase";
-import { auth, signOutUser, type UserRole } from "@/src/lib/auth";
+import { auth, signOutUser } from "@/src/lib/services/auth_service";
+import { type UserRole } from "@/src/lib/types/auth_types";
 
 export default function SiteHeader() {
   const [user, setUser] = useState<User | null>(null);

@@ -1,5 +1,7 @@
 "use client";
 
+import { exportXlsx } from "@/src/lib/export-xlsx";
+
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { onAuthStateChanged, type User } from "firebase/auth";
 import { useParams, useRouter } from "next/navigation";
@@ -12,8 +14,9 @@ import AppSidebar from "@/src/components/app-sidebar";
 import { Button } from "@/src/components/ui/button";
 import { Card } from "@/src/components/ui/card";
 import { Input } from "@/src/components/ui/input";
-import { auth } from "@/src/lib/auth";
-import { createClient, listClients, updateClient, type Client, type ClientAddress, type ClientInput } from "@/src/lib/clients";
+import { auth } from "@/src/lib/services/auth_service";
+import { createClient, listClients, updateClient } from "@/src/lib/services/clients_service";
+import { type Client, type ClientAddress, type ClientInput } from "@/src/lib/types/clients_types";
 import { formatCepInput, getCepDigits } from "@/src/helpers/cep";
 import { formatCpfInput, isValidCpf } from "@/src/helpers/cpf-cnpj";
 import { formatDateInput } from "@/src/helpers/date";
@@ -189,13 +192,7 @@ export default function ClientesPage() {
       ["Nome", "CPF", "Data de nascimento", "E-mail", "Telefone", "CEP", "Rua", "Número", "Complemento", "Bairro", "Cidade", "UF"],
       ...filteredCustomers.map((customer) => [customer.name, formatCpfInput(customer.cpf), displayDate(customer.birthDate), customer.email ?? "", customer.phone ?? "", customer.address.cep, customer.address.street, customer.address.number, customer.address.complement, customer.address.neighborhood, customer.address.city, customer.address.state]),
     ];
-    const csv = rows.map((row) => row.map((cell) => `"${cell.replaceAll('"', '""')}"`).join(";")).join("\n");
-    const url = URL.createObjectURL(new Blob(["\uFEFF", csv], { type: "text/csv;charset=utf-8" }));
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = "clientes-tecnox.csv";
-    anchor.click();
-    URL.revokeObjectURL(url);
+    void exportXlsx(rows, "clientes-tecnox");
   }
 
   if (isLoading) return <main className="grid min-h-screen place-items-center text-sm text-neutral-600"><LoaderCircle className="mr-2 inline size-4 animate-spin" /> Carregando clientes...</main>;
@@ -205,7 +202,7 @@ export default function ClientesPage() {
       <AppSidebar className="hidden md:flex" />
       <main className="min-w-0 flex-1 px-4 py-6 sm:px-7 lg:px-8 lg:py-7">
         <div className="mx-auto max-w-6xl">
-          <header className="mb-5 flex flex-wrap items-end justify-between gap-3"><div><p className="mb-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500">Administração</p><h1 className="text-xl font-bold tracking-tight">Clientes</h1><p className="mt-1 text-xs text-slate-500">Cadastre e consulte os clientes desta loja.</p></div><Button type="button" variant="outline" onClick={exportCustomers} className="h-9 border-slate-300 text-xs" disabled={!filteredCustomers.length}><Download className="size-4" />Exportar CSV</Button></header>
+          <header className="mb-5 flex flex-wrap items-end justify-between gap-3"><div><p className="mb-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500">Administração</p><h1 className="text-xl font-bold tracking-tight">Clientes</h1><p className="mt-1 text-xs text-slate-500">Cadastre e consulte os clientes desta loja.</p></div><Button type="button" variant="outline" onClick={exportCustomers} className="h-9 border-slate-300 text-xs" disabled={!filteredCustomers.length}><Download className="size-4" />Exportar clientes</Button></header>
           <div className="grid items-start gap-5 lg:grid-cols-[350px_minmax(0,1fr)]">
             <section>
               <Card className="gap-0 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5 ring-0">

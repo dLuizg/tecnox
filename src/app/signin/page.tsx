@@ -4,7 +4,7 @@ import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, LoaderCircle, LockKeyhole, Mail } from "lucide-react";
-import { sendPasswordReset, signInWithEmail, signInWithGoogle } from "@/src/lib/auth";
+import { sendPasswordReset, signInWithEmail, signInWithGoogle } from "@/src/lib/services/auth_service";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
 import { Label } from "@/src/components/ui/label";
